@@ -98,6 +98,12 @@ all_spectra %>%
 # and increase in increments of 5nm. 
 # linear interpolation to ensure that each spectrum has the same increments
 
+# how many different minimum wavelengths in the data set
+count_min_wavelengths <- all_spectra %>% 
+  dplyr::group_by(uid.x) %>% 
+  dplyr::summarise(min_wavelength_nm = min(wavelength_nm)) %>% 
+  dplyr::count(min_wavelength_nm) 
+
 
 # create train, evaluation, & test set ------------------------------------
 # split multiple observations of individuals across sets.
