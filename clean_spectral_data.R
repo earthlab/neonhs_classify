@@ -2,6 +2,7 @@ library(here)
 library(dplyr)
 library(ggplot2)
 library(stringr)
+library(tidyr)
 
 # read original spectra
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
@@ -33,9 +34,46 @@ all_spectra <- all_spectra %>%
 
 # count the number of genus vs species spectra
 all_spectra %>% 
+  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
+  dplyr::group_by(taxonRank) %>% 
+  dplyr::tally()
+
+# count the number of spectra per species (unique indvdls)
+species_count <- all_spectra %>% 
+  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
+  dplyr::group_by(scientificName) %>% 
+  dplyr::tally()
+
+# alphabetize the scientific names. some entries have the same genus 
+# and species, with additional species info
+sort(unique(all_spectra$scientificName))
+
+# are there are any species classes that should be merged 
+species_var <- all_spectra %>% 
+  # first, duplicate the scientificName
+  dplyr::mutate(scientificNameTemp = scientificName) %>% 
+  # separate into genus and species using space as delimeter 
+  tidyr::separate(scientificNameTemp, c("genus", "speciesTemp"), " ", extra = "merge") %>% 
+  # separate into species and variation, if present
+  tidyr::separate(speciesTemp, c("species", "variation"), "var.", extra = "merge") %>% 
+  # select certain columns to assess
+  dplyr::select(c(scientificName, genus, species, variation)) %>% 
+  dplyr::distinct(scientificName, .keep_all=TRUE) %>% 
+  # alphabetical order
+  dplyr::arrange(scientificName) 
+  
+# count the number of spectra with species with multiple variations
+species_count %>% 
+  dplyr::filter(stringr::str_detect(scientificName, "Acer saccharum Marshall") | 
+                stringr::str_detect(scientificName, "Cercis canadensis L.") | 
+                stringr::str_detect(scientificName, "Pseudotsuga menziesii")) %>% 
+  dplyr::summarise(sum(n))
+                                         
 
 
-  # visualize spectra -------------------------------------------------------
+# visualize spectra -------------------------------------------------------
+
+# based on Max's Gist: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
 
 all_spectra %>%
   ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
