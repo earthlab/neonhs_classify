@@ -4,7 +4,8 @@ library(ggplot2)
 library(stringr)
 library(tidyr)
 
-# read original spectra
+# read original spectra, derived from NEON hyperspectral imagery for mapped stems
+# created by mbjoseph: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
 
 colnames(all_spectra)
