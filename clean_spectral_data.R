@@ -6,9 +6,35 @@ library(tidyr)
 
 # read original spectra, derived from NEON hyperspectral imagery for mapped stems
 # created by mbjoseph: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
+# columns: 
+#     individualID --> unique identifier for each individual plant, NEON.PLA.D##.SITE.##### 
+#                      (an individual can have multiple measurements over time)
+#     date.x --> date of plant measurement/observation
+#     uid.x --> unique identifier for the record
+#     namedLocation --> name of measurement location in NEON database
+#     adjEasting, adjNorthing --> UTM coordinates of mapped stem 
+#     plantStatus --> physical status of the individual (live, dead, lost)
+#     taxonID --> species code
+#     scientificName --> scientific name, associated with taxonID,
+#                        lowest taxonomic rank that can be determined.
+#     band_idx --> number of the spectral band (band1, band 2, ... band 426)
+#     wavelength_nm --> band wavelength in units of nm
+#     reflectance --> decimal reflectance [0,1] extracted from NEON NIS 
+#                     hyperspectral imagery collected during same year
+#     mask --> TRUE/LFALSE to identify water absorption bands
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
 
 colnames(all_spectra)
+
+
+
+# check number of individuals and observations ----------------------------
+
+message(paste("Number of unique individualID values:",
+              length(unique(all_spectra$individualID))))   
+
+message(paste("Number of unique uid.x values:",
+              length(unique(all_spectra$uid.x))))
 
 
 # check consistency of species names  -------------------------------------
@@ -20,6 +46,7 @@ message(paste("Number of unique taxonID values:",
 
 message(paste("Number of unique scientificName values:",
               length(unique(all_spectra$scientificName))))
+
 
 # how many taxon ranks are genus vs species? 
 
@@ -103,6 +130,9 @@ count_min_wavelengths <- all_spectra %>%
   dplyr::group_by(uid.x) %>% 
   dplyr::summarise(min_wavelength_nm = min(wavelength_nm)) %>% 
   dplyr::count(min_wavelength_nm) 
+
+# most spectra start at 381 with increments of 5nm (381, )386, ... 2510)  
+
 
 
 # create train, evaluation, & test set ------------------------------------
