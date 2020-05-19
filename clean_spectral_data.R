@@ -114,7 +114,34 @@ all_spectra %>%
              # wrap long scientific names
              #,labeller = label_wrap_gen()) +
   theme(text = element_text(size=4)) + 
+  scale_color_manual(values = c("#e6550d","#1c9099")) + 
   theme_minimal()
+
+
+
+
+
+# one individualID with numerous uid.x and dates --------------------------
+
+spectrum <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
+
+spectrum %>% 
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
+  geom_line(aes(color = uid.x, linetype = uid.x), 
+            alpha = 0.5, size = 1) +
+  labs(title = spectrum$individualID) + 
+  theme_bw()
+
+# unique uid.x values: 
+as.character(unique(spectrum$uid.x))
+
+# unique date values: 
+as.character(unique(spectrum$date.x))
+
+# number of unique reflectance values, <426 
+length(unique(spectrum$reflectance))
+
 
 
 
@@ -126,12 +153,50 @@ all_spectra %>%
 # linear interpolation to ensure that each spectrum has the same increments
 
 # how many different minimum wavelengths in the data set
-count_min_wavelengths <- all_spectra %>% 
-  dplyr::group_by(uid.x) %>% 
-  dplyr::summarise(min_wavelength_nm = min(wavelength_nm)) %>% 
-  dplyr::count(min_wavelength_nm) 
+#count_min_wavelengths <- all_spectra %>% 
+#  dplyr::group_by(uid.x) %>% 
+#  dplyr::summarise(min_wavelength_nm = min(wavelength_nm)) %>% 
+#  dplyr::count(min_wavelength_nm) 
+
+count_min_wavelengths <- all_spectra %>%
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::group_by(wavelength_nm) %>%
+  dplyr::count(wavelength_nm)
+  
 
 # most spectra start at 381 with increments of 5nm (381, )386, ... 2510)  
+
+# find an individualID that doesn't start with 381
+all_spectra$individualID[all_spectra$wavelength_nm == 381][1]
+# 381 --> "NEON.PLA.D16.ABBY.01037"
+# 382 --> "NEON.PLA.D16.ABBY.01515"
+# 384 --> "NEON.PLA.D01.BART.02912"
+# weirdly 347 --> "NEON.PLA.D20.PUUM.08313"
+
+# select a specific spectrum using individualID
+spectrum <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D20.PUUM.08313") 
+
+# plot individual spectrum
+ggplot(data = spectrum) +
+  geom_line(aes(x = wavelength_nm, y = reflectance)) +
+  labs(title = spectrum$individualID) + 
+  theme_bw()
+
+# plot all 4 spectra to see their starting/ending wavelengths
+all_spectra %>% 
+  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
+                                    "NEON.PLA.D16.ABBY.01037",
+                                    "NEON.PLA.D16.ABBY.01515",
+                                    "NEON.PLA.D01.BART.02912")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
+  geom_line(aes(color = individualID, linetype = uid.x), 
+            alpha = 0.4) +
+  labs() + 
+  #lims(x = c(340,390), y = c(0,0.5)) +  # beginning of spectra
+  lims(x = c(2470,2520), y = c(0,0.5)) + # end of spectra
+  theme_bw()
+
 
 
 
