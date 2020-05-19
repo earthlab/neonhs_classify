@@ -1,0 +1,46 @@
+---
+title: "Clean spectral data"
+author: "Victoria Scholl"
+date: "5/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyr)
+```
+
+## Read original spectra
+
+Spectra extracted using NEON data, by mbjoseph: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
+
+Columns: 
+
+* **individualID** - unique identifier for each individual plant. Individuals can have multiple measurements over time.
+* **date.x** - date of plant measurement/observation
+* **uid.x** - unique identifier for the record
+* **namedLocation** - name of measurement location in NEON database
+* **adjEasting, adjNorthing** - UTM coordinates of mapped stem 
+* **plantStatus** - physical status of the individual (live, dead, lost)
+* **taxonID** - species code
+* **scientificName** - scientific name, associated with taxonID, lowest taxonomic rank that can be determined.
+* **band_idx** - number of the spectral band (band1, band 2, ... band 426)
+* **wavelength_nm** - band wavelength in units of nm
+* **reflectance** - decimal reflectance [0,1] extracted from NEON NIS hyperspectral imagery collected during same year
+* **mask** - TRUE/LFALSE to identify water absorption bands
+
+
+```{r}
+all_spectra <- read.csv(here::here("data","all_spectra.csv"))
+#colnames(all_spectra)
+#summary(all_spectra)
+```
+
+
+
+
