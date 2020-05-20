@@ -26,8 +26,6 @@ all_spectra <- read.csv(here::here("data","all_spectra.csv"))
 
 colnames(all_spectra)
 
-
-
 # check number of individuals and observations ----------------------------
 
 message(paste("Number of unique individualID values:",
@@ -38,7 +36,6 @@ message(paste("Number of unique uid.x values:",
 
 
 # check consistency of species names  -------------------------------------
-
 # are there any entries that are misspelled or duplicated? 
 
 message(paste("Number of unique taxonID values:",
@@ -71,10 +68,6 @@ species_count <- all_spectra %>%
   dplyr::distinct(uid.x, .keep_all=TRUE) %>%
   dplyr::group_by(scientificName) %>% 
   dplyr::tally()
-
-# alphabetize the scientific names. some entries have the same genus 
-# and species, with additional species info
-sort(unique(all_spectra$scientificName))
 
 # are there are any species classes that should be merged 
 species_var <- all_spectra %>% 
