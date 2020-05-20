@@ -104,7 +104,7 @@ There are 3 species with variations in the data set (identified manually for now
 * *Cercis canadensis L.*, *Cercis canadensis L. var. canadensis*
 * *Pseudotsuga menziesii*, *Pseudotsuga menziesii (Mirb.) Franco var. menziesii*
 
-<p style="color:red">merge spectra with each of these variations - give them the same taxonID label? </p>
+<p style="color:red">merge spectra species with its variations - give them the same taxonID label? </p>
 
 
 ```{r, warning=FALSE, message=FALSE}
@@ -140,24 +140,92 @@ Based on Max's Gist code: https://gist.github.com/mbjoseph/5c18781e508460e14f641
 
 Plot all spectra; color the spectra based on genus/species taxonomic level. 
 
-```{r, warning=FALSE, fig.height=12, fig.width=10}
+```{r, warning=FALSE, fig.height=16, fig.width=14}
 all_spectra %>%
   ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
              # color each facet plot based on taxonRank
              color = taxonRank)) +
   geom_path(alpha = .2) +
-  xlab('Wavelength (nm)') +
-  ylab('Reflectance') +
+  labs(x = '\n Wavelength (nm)',
+       y = 'Reflectance \n',
+       color = "Taxon Rank") + 
   facet_wrap(~scientificName
              # wrap long scientific names
-             ,labeller = label_wrap_gen()) +
-  theme(text = element_text(size=4),
-        axis.text.x = element_text(angle=90, hjust=1, size = 4)) + 
+             #,labeller = label_wrap_gen()) +
+             ,labeller = label_wrap_gen(20)) + 
   scale_color_manual(values = c("#e6550d","#1c9099")) + 
-  theme_minimal()
+  theme_minimal() + 
+  # Adjust the text size and rotation angle 
+  theme(text = element_text(size=11),
+        axis.text.x = element_text(angle=90, hjust=1),
+        axis.title.y = element_text(size = 14),
+        axis.title.x = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14))
 ```
 
-Look at the spectra for an individualID that has multiple uid.x values assoc
+Since the number of unique **individIDs** is not equal to the number of unique **uid.x**, take a closer look at the multiple spectra associated with a single individualID. 
 
-### Interpolate wavelengths 
+```{r}
+
+# single individualID associated with 4 spectra 
+spectrum <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
+
+# unique uid.x values: 
+as.character(unique(spectrum$uid.x))
+
+# unique date values: 
+as.character(unique(spectrum$date.x))
+
+# number of unique reflectance values
+length(unique(spectrum$reflectance))
+```
+
+This individualID is associated with four different uid.x values and four different dates values. 
+
+```{r fig.width=12}
+# plot the spectra associated with the same individualID
+spectrum %>% 
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
+  geom_line(aes(color = uid.x, linetype = uid.x), 
+            alpha = 0.5, size = 1) +
+  labs(title = paste("Reflectance spectrum, individualID:", spectrum$individualID)) + 
+  theme_bw()
+```
+
+<p style="color:red">all four reflectance spectra appear to be identical. it appears that they are each associated with a different date, but if they were truly extracted from 4 different NEON NIS image sets, we would expect the reflectance values to have some variation. How to deal with this? How to count the number of instances where this is occurring? </p>
+
+### Standardize the bands
+
+Look at the starting wavelength ("band1") for each reflectance spectrum: 
+
+```{r}
+# how many different starting wavelength values in the data set? 
+count_min_wavelengths <- all_spectra %>%
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::group_by(wavelength_nm) %>%
+  dplyr::count(wavelength_nm)
+
+kableExtra::kable(count_min_wavelengths) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
+```
+
+
+Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 381nm. 
+
+<p style="color:red">Weird outlier starting at 347nm, let's look into that... </p>
+
+```{r}
+
+```
+
+
+
+
+
+
+Interpolate wavelength values to have the same starting/ending/increment values. 
 
