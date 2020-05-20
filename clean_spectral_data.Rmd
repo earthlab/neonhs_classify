@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "5/19/2020"
+date: "5/19/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -13,11 +13,12 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(tidyr)
+library(kableExtra)
 ```
 
-## Read original spectra
+### Explore data
 
-Spectra extracted using NEON data, by mbjoseph: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
+Read original spectra, extracted using NEON data, by mbjoseph: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
 
 Columns: 
 
@@ -25,8 +26,11 @@ Columns:
 * **date.x** - date of plant measurement/observation
 * **uid.x** - unique identifier for the record
 * **namedLocation** - name of measurement location in NEON database
-* **adjEasting, adjNorthing** - UTM coordinates of mapped stem 
-* **plantStatus** - physical status of the individual (live, dead, lost)
+* **adjEasting, adjNorthing** - UTM coordinates of mapped stem
+
+<p style="color:red">add UTM zone?</p>
+
+* **plantStatus** - physical status of the individual
 * **taxonID** - species code
 * **scientificName** - scientific name, associated with taxonID, lowest taxonomic rank that can be determined.
 * **band_idx** - number of the spectral band (band1, band 2, ... band 426)
@@ -37,10 +41,123 @@ Columns:
 
 ```{r}
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
-#colnames(all_spectra)
-#summary(all_spectra)
 ```
 
+Number of unique **individualID** & **uid.x** values: 
+
+```{r, message=TRUE}
+length(unique(all_spectra$individualID))
+
+length(unique(all_spectra$uid.x))
+```
+
+Number of unique **scientificName** & **taxonID** values (these should match):
+
+```{r}
+length(unique(all_spectra$taxonID))
+
+length(unique(all_spectra$scientificName))
+```
+
+How many taxonomic identifications are at the genus vs species level? 
+
+<p style="color:red">keep the original genus/species taxon rank column recorded by NEON?</p>
 
 
+```{r}
+# add new column, taxonRank, based on NEON taxonomic data: https://data.neonscience.org/apps/taxon 
+# if scientificName contains "sp." , rank is "genus", otherwise "species". 
+all_spectra <- all_spectra %>% 
+  dplyr::mutate(taxonRank = case_when(
+    stringr::str_detect(scientificName, "sp.") ~ "genus",
+    TRUE ~ "species"
+  ))
+
+# count the number of genus vs species spectra
+all_spectra %>% 
+  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
+  dplyr::group_by(taxonRank) %>% 
+  dplyr::tally() %>% 
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
+
+# count the number of spectra per species (unique identifiers)
+species_count <- all_spectra %>% 
+  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
+  dplyr::group_by(scientificName) %>% 
+  dplyr::tally()
+
+
+# some scientificName entries have same genus and species, 
+# but may/may not have variation
+kableExtra::kable(head(species_count, n = 10)) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
+```
+
+There are 3 species with variations in the data set (identified manually for now): 
+
+* *Acer saccharum Marshall*, *Acer saccharum Marshall var. saccharum*
+* *Cercis canadensis L.*, *Cercis canadensis L. var. canadensis*
+* *Pseudotsuga menziesii*, *Pseudotsuga menziesii (Mirb.) Franco var. menziesii*
+
+<p style="color:red">merge spectra with each of these variations - give them the same taxonID label? </p>
+
+
+```{r, warning=FALSE, message=FALSE}
+# are there are any species classes that should be merged 
+species_var <- all_spectra %>% 
+  # first, duplicate the scientificName
+  dplyr::mutate(scientificNameTemp = scientificName) %>% 
+  # separate into genus and species using space as delimeter 
+  tidyr::separate(scientificNameTemp, c("genus", "speciesTemp"), " ", extra = "merge") %>% 
+  # separate into species and variation, if present
+  tidyr::separate(speciesTemp, c("species", "variation"), "var.", extra = "merge") %>% 
+  # select certain columns to assess
+  dplyr::select(c(scientificName, genus, species, variation)) %>% 
+  dplyr::distinct(scientificName, .keep_all=TRUE) %>% 
+  # alphabetical order
+  dplyr::arrange(scientificName) 
+  
+# show the number of spectra with species with multiple variations
+species_count %>% 
+  dplyr::filter(stringr::str_detect(scientificName, "Acer saccharum Marshall") | 
+                stringr::str_detect(scientificName, "Cercis canadensis L.") | 
+                stringr::str_detect(scientificName, "Pseudotsuga menziesii")) %>% 
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
+
+```
+
+### Visualize spectra 
+
+Based on Max's Gist code: https://gist.github.com/mbjoseph/5c18781e508460e14f64193571b98b7d 
+
+Plot all spectra; color the spectra based on genus/species taxonomic level. 
+
+```{r, warning=FALSE, fig.height=12, fig.width=10}
+all_spectra %>%
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
+             # color each facet plot based on taxonRank
+             color = taxonRank)) +
+  geom_path(alpha = .2) +
+  xlab('Wavelength (nm)') +
+  ylab('Reflectance') +
+  facet_wrap(~scientificName
+             # wrap long scientific names
+             ,labeller = label_wrap_gen()) +
+  theme(text = element_text(size=4),
+        axis.text.x = element_text(angle=90, hjust=1, size = 4)) + 
+  scale_color_manual(values = c("#e6550d","#1c9099")) + 
+  theme_minimal()
+```
+
+Look at the spectra for an individualID that has multiple uid.x values assoc
+
+### Interpolate wavelengths 
 
