@@ -159,7 +159,7 @@ count_min_wavelengths <- all_spectra %>%
 
 # most spectra start at 381 with increments of 5nm (381, )386, ... 2510)  
 
-# find an individualID that doesn't start with 381
+# find an individualID that starts with each of these wavelength band1 values
 all_spectra$individualID[all_spectra$wavelength_nm == 381][1]
 # 381 --> "NEON.PLA.D16.ABBY.01037"
 # 382 --> "NEON.PLA.D16.ABBY.01515"
