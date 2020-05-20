@@ -28,7 +28,7 @@ Columns:
 * **namedLocation** - name of measurement location in NEON database
 * **adjEasting, adjNorthing** - UTM coordinates of mapped stem
 
-<p style="color:red">add UTM zone?</p>
+<p style="color:green">VS-NOTE: add UTM zone?</p>
 
 * **plantStatus** - physical status of the individual
 * **taxonID** - species code
@@ -61,7 +61,7 @@ length(unique(all_spectra$scientificName))
 
 How many taxonomic identifications are at the genus vs species level? 
 
-<p style="color:red">keep the original genus/species taxon rank column recorded by NEON?</p>
+<p style="color:green">VS-NOTE: keep the original genus/species taxon rank column recorded by NEON?</p>
 
 
 ```{r}
@@ -104,7 +104,7 @@ There are 3 species with variations in the data set (identified manually for now
 * *Cercis canadensis L.*, *Cercis canadensis L. var. canadensis*
 * *Pseudotsuga menziesii*, *Pseudotsuga menziesii (Mirb.) Franco var. menziesii*
 
-<p style="color:red">merge spectra species with its variations - give them the same taxonID label? </p>
+<p style="color:green">VS-NOTE: merge spectra species with its variations - give them the same taxonID label? </p>
 
 
 ```{r, warning=FALSE, message=FALSE}
@@ -193,7 +193,7 @@ spectrum %>%
   theme_bw()
 ```
 
-<p style="color:red">all four reflectance spectra appear to be identical. it appears that they are each associated with a different date, but if they were truly extracted from 4 different NEON NIS image sets, we would expect the reflectance values to have some variation. How to deal with this? How to count the number of instances where this is occurring? </p>
+<p style="color:green">VS-NOTE: all four reflectance spectra appear to be identical. it appears that they are each associated with a different date, but if they were truly extracted from 4 different NEON NIS image sets, we would expect the reflectance values to have some variation. How to deal with this? How to count the number of instances where this is occurring? </p>
 
 ### Standardize the bands
 
@@ -238,7 +238,7 @@ all_spectra %>%
   theme_bw()
 ```
 
-<p style="color:red">Weird outlier starting at 347nm... creating plots to zoom into the beginning/end of the wavelength range</p>
+<p style="color:green">VS-NOTE: Weird outlier starting at 347nm... creating plots to zoom into the beginning/end of the wavelength range</p>
 
 Beginning of wavelength range: 
 
