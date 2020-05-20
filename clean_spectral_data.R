@@ -164,7 +164,7 @@ all_spectra$individualID[all_spectra$wavelength_nm == 381][1]
 # 381 --> "NEON.PLA.D16.ABBY.01037"
 # 382 --> "NEON.PLA.D16.ABBY.01515"
 # 384 --> "NEON.PLA.D01.BART.02912"
-# weirdly 347 --> "NEON.PLA.D20.PUUM.08313"
+# 347 --> "NEON.PLA.D20.PUUM.08313"   weird? 
 
 # select a specific spectrum using individualID
 spectrum <- all_spectra %>% 
