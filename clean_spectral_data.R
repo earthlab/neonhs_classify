@@ -195,23 +195,45 @@ all_spectra %>%
 # get a spectrum starting on 381, the target wavelengths
 wl_target <- all_spectra %>% 
   dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
-  select(band_idx, wavelength_nm, reflectance)
+  dplyr::select(band_idx, wavelength_nm, reflectance)
 
 # get a spectrum starting on 384, with values to be interpolated
 wl_orig <- all_spectra %>% 
   dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
-  select(band_idx, wavelength_nm, reflectance)
+  dplyr::select(band_idx, wavelength_nm, reflectance) %>% 
+  dplyr::mutate(spectra_type = "orig")
 
 wl_interp <- approx(x = wl_orig$wavelength_nm,
                     y = wl_orig$reflectance,
                     xout = wl_target$wavelength_nm,
                     method = "linear")
 
-wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
 
+
+# -- in progress -----
+
+# rename the columns to plot interplated reflectance values 
+wl_plot <- data.frame(band_idx = wl_orig$band_idx,
+                      wavelength_nm = wl_interp$x,
+                      reflectance = wl_interp$y,
+                      spectra_type = "interpolated") %>% 
+  cbind(wl_orig)
 
 # plot original and interpolated spectra
-# pivot long for ggplot? 
+
+interp_plt <- wl_orig %>% # original
+  ggplot(aes(x = wavelength_nm, y = reflectance)) +
+  geom_point(aes(color = spectra_type), 
+            alpha = 0.5) +
+  theme_bw()
+
+
+interp_plt + # interpolated
+  geom_point(wl_plot, aes(x = wavelength_nm, y = reflectance, color = spectra_type), 
+            alpha = 0.5) +
+  theme_bw()
+
+
 
 
 
