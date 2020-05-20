@@ -195,7 +195,7 @@ spectrum %>%
 
 <p style="color:green">VS-NOTE: all four reflectance spectra appear to be identical. it appears that they are each associated with a different date, but if they were truly extracted from 4 different NEON NIS image sets, we would expect the reflectance values to have some variation. How to deal with this? How to count the number of instances where this is occurring? </p>
 
-### Standardize the bands
+### Explore the bands
 
 Look at the starting wavelength ("band1") for each reflectance spectrum: 
 
@@ -277,6 +277,36 @@ all_spectra %>%
 ```
 
 
+### Standardize the bands: Interpolate wavelengths 
 
-Interpolate wavelength values to have the same starting/ending/increment values. 
+Interpolate wavelength values to have the same 426 bands starting at 381nm, ending at 2510nm, incrementing by 5nm. 
+
+```{r}
+# get a spectrum starting on 381, the target wavelengths
+wl_target <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
+  select(band_idx, wavelength_nm, reflectance)
+
+# get a spectrum starting on 384, with values to be interpolated
+wl_orig <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
+  select(band_idx, wavelength_nm, reflectance)
+
+wl_interp <- approx(x = wl_orig$wavelength_nm,
+                    y = wl_orig$reflectance,
+                    xout = wl_target$wavelength_nm,
+                    method = "linear")
+
+wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
+
+# show table of interpolated values 
+kableExtra::kable(head(wl_plot, n = 10)) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
+```
+
+```{r}
+# plot original and interpolated reflectance spectrum
+```
 

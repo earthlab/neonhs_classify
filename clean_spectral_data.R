@@ -137,13 +137,7 @@ length(unique(spectrum$reflectance))
 
 
 
-
-
-
-# standardize the bands  ------------------------------------------------
-# spectra have different starting wavelengths (i.e. 381, 383, 385nm...)
-# and increase in increments of 5nm. 
-# linear interpolation to ensure that each spectrum has the same increments
+# Explore the bands ------------------------------------------------------
 
 # how many different minimum wavelengths in the data set
 #count_min_wavelengths <- all_spectra %>% 
@@ -189,6 +183,32 @@ all_spectra %>%
   #lims(x = c(340,390), y = c(0,0.5)) +  # beginning of spectra
   lims(x = c(2470,2520), y = c(0,0.5)) + # end of spectra
   theme_bw()
+
+
+
+# standardize the bands  ------------------------------------------------
+# spectra have different starting wavelengths (i.e. 381, 383, 385nm...)
+# and increase in increments of 5nm. 
+# linear interpolation to ensure that each spectrum has the same increments
+
+
+# get a spectrum starting on 381, the target wavelengths
+wl_target <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
+  select(band_idx, wavelength_nm, reflectance)
+
+# get a spectrum starting on 384, with values to be interpolated
+wl_orig <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
+  select(band_idx, wavelength_nm, reflectance)
+
+wl_interp <- approx(x = wl_orig$wavelength_nm,
+                    y = wl_orig$reflectance,
+                    xout = wl_target$wavelength_nm,
+                    method = "linear")
+
+wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
+
 
 
 
