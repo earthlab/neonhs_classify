@@ -167,7 +167,6 @@ all_spectra %>%
 Since the number of unique **individIDs** is not equal to the number of unique **uid.x**, take a closer look at the multiple spectra associated with a single individualID. 
 
 ```{r}
-
 # single individualID associated with 4 spectra 
 spectrum <- all_spectra %>% 
   dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
@@ -213,17 +212,69 @@ kableExtra::kable(count_min_wavelengths) %>%
                             position = "left")
 ```
 
-
 Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 381nm. 
 
-<p style="color:red">Weird outlier starting at 347nm, let's look into that... </p>
-
 ```{r}
-
+# find an individualID that starts with each of these wavelength band1 values
+as.character(all_spectra$individualID[all_spectra$wavelength_nm == 347][1])
+# 381 --> "NEON.PLA.D16.ABBY.01037"
+# 382 --> "NEON.PLA.D16.ABBY.01515"
+# 384 --> "NEON.PLA.D01.BART.02912"
+# 347 --> "NEON.PLA.D20.PUUM.08313"   weird? 
 ```
 
 
+```{r warning=FALSE, fig.width=12}
+# plot all 4 spectra to see their starting/ending wavelengths
+all_spectra %>% 
+  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
+                                    "NEON.PLA.D16.ABBY.01037",
+                                    "NEON.PLA.D16.ABBY.01515",
+                                    "NEON.PLA.D01.BART.02912")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
+  geom_line(aes(color = individualID), 
+            alpha = 0.4) +
+  labs(title = "Four reflectance spectra, each with different starting wavelength") + 
+  theme_bw()
+```
 
+<p style="color:red">Weird outlier starting at 347nm... creating plots to zoom into the beginning/end of the wavelength range</p>
+
+Beginning of wavelength range: 
+
+```{r warning=FALSE, fig.width=12}
+# plot all 4 spectra to see their starting/ending wavelengths
+all_spectra %>% 
+  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
+                                    "NEON.PLA.D16.ABBY.01037",
+                                    "NEON.PLA.D16.ABBY.01515",
+                                    "NEON.PLA.D01.BART.02912")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
+  geom_line(aes(color = individualID), 
+            alpha = 0.5, size = 1) +
+  labs(title = "Four spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
+  # zoom in on beginning of spectra
+  lims(x = c(340,400), y = c(0,0.5)) +
+  theme_bw()
+```
+
+End of wavelength range: 
+
+```{r warning=FALSE, fig.width=12}
+# plot all 4 spectra to see their starting/ending wavelengths
+all_spectra %>% 
+  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
+                                    "NEON.PLA.D16.ABBY.01037",
+                                    "NEON.PLA.D16.ABBY.01515",
+                                    "NEON.PLA.D01.BART.02912")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
+  geom_line(aes(color = individualID), 
+            alpha = 0.5, size = 1) +
+  labs(title = "Four spectra, each with different wavelengths. Zoom in on end of spectra") + 
+  # zoom in on end of spectra
+  lims(x = c(2460,2520), y = c(0,0.3)) + 
+  theme_bw()
+```
 
 
 
