@@ -210,6 +210,12 @@ wl_interp <- approx(x = wl_orig$wavelength_nm,
 wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
 
 
+# plot original and interpolated spectra
+# pivot long for ggplot? 
+
+
+
+
 
 
 

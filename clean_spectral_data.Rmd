@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "5/19/2020 Earth Lab GRA"
+date: "5/21/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -285,12 +285,12 @@ Interpolate wavelength values to have the same 426 bands starting at 381nm, endi
 # get a spectrum starting on 381, the target wavelengths
 wl_target <- all_spectra %>% 
   dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
-  select(band_idx, wavelength_nm, reflectance)
+  dplyr::select(band_idx, wavelength_nm, reflectance)
 
 # get a spectrum starting on 384, with values to be interpolated
 wl_orig <- all_spectra %>% 
   dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
-  select(band_idx, wavelength_nm, reflectance)
+  dplyr::select(band_idx, wavelength_nm, reflectance)
 
 wl_interp <- approx(x = wl_orig$wavelength_nm,
                     y = wl_orig$reflectance,
@@ -309,4 +309,15 @@ kableExtra::kable(head(wl_plot, n = 10)) %>%
 ```{r}
 # plot original and interpolated reflectance spectrum
 ```
+
+### Standardize train, evaluation, & test set
+
+Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”).
+
+<p style="color:green">VS-NOTE: what percentage is standard for these? How to split based on the class imbalance?</p>
+
+
+### Output "clean dataset" 
+
+
 
