@@ -151,7 +151,6 @@ all_spectra %>%
        color = "Taxon Rank") + 
   facet_wrap(~scientificName
              # wrap long scientific names
-             #,labeller = label_wrap_gen()) +
              ,labeller = label_wrap_gen(20)) + 
   scale_color_manual(values = c("#e6550d","#1c9099")) + 
   theme_minimal() + 
@@ -307,7 +306,7 @@ kableExtra::kable(head(wl_plot, n = 10)) %>%
 ```
 
 
-<p style="color:green">VS-NOTE: How to deal with points on the edges?</p>
+<p style="color:green">VS-NOTE: How to deal with points on the edges? And how to interpolate more efficiently in the tidy long data format...</p>
 
 ```{r}
 # plot original and interpolated reflectance spectrum
