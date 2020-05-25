@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "5/21/2020 Earth Lab GRA"
+date: "5/25/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -26,13 +26,14 @@ Columns:
 * **date.x** - date of plant measurement/observation
 * **uid.x** - unique identifier for the record
 * **namedLocation** - name of measurement location in NEON database
-* **adjEasting, adjNorthing** - UTM coordinates of mapped stem
-
-<p style="color:green">VS-NOTE: add UTM zone?</p>
-
+* **api.utmZone, adjEasting, adjNorthing** - UTM zone and coordinates of mapped stem
 * **plantStatus** - physical status of the individual
+* **growthForm** - growth form classification (sapling, tree, number of boles, etc.)
+* **stemDiameter, measurementHeight** - diameter of stem and height at which it was measured 
+* **height** - plant height 
 * **taxonID** - species code
 * **scientificName** - scientific name, associated with taxonID, lowest taxonomic rank that can be determined.
+* **taxonRank** - lowest level taxonomic rank that can be determined for the individual (genus, species, variety)
 * **band_idx** - number of the spectral band (band1, band 2, ... band 426)
 * **wavelength_nm** - band wavelength in units of nm
 * **reflectance** - decimal reflectance [0,1] extracted from NEON NIS hyperspectral imagery collected during same year
@@ -280,33 +281,11 @@ all_spectra %>%
 
 Interpolate wavelength values to have the same 426 bands starting at 381nm, ending at 2510nm, incrementing by 5nm. 
 
-```{r, warning=FALSE, message=FALSE}
-# get a spectrum starting on 381, the target wavelengths
-wl_target <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
-  dplyr::select(band_idx, wavelength_nm, reflectance)
+```{r}
+# interpolate all spectra efficiently 
 
-# get a spectrum starting on 384, with values to be interpolated
-wl_orig <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
-  dplyr::select(band_idx, wavelength_nm, reflectance)
-
-wl_interp <- approx(x = wl_orig$wavelength_nm,
-                    y = wl_orig$reflectance,
-                    xout = wl_target$wavelength_nm,
-                    method = "linear")
-
-wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
-
-# show table of interpolated values 
-kableExtra::kable(head(wl_plot, n = 10)) %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", 
-                            full_width = F, 
-                            position = "left")
 ```
 
-
-<p style="color:green">VS-NOTE: How to deal with points on the edges? And how to interpolate more efficiently in the tidy long data format...</p>
 
 ```{r}
 # plot original and interpolated reflectance spectrum
