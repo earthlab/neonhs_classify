@@ -60,21 +60,9 @@ length(unique(all_spectra$taxonID))
 length(unique(all_spectra$scientificName))
 ```
 
-How many taxonomic identifications are at the genus vs species level? 
-
-<p style="color:green">VS-NOTE: keep the original genus/species taxon rank column recorded by NEON?</p>
-
+How many taxonomic identifications are at the genus vs species level? (Using the NEON-provided taxon Rank data)
 
 ```{r}
-# add new column, taxonRank, based on NEON taxonomic data: https://data.neonscience.org/apps/taxon 
-# if scientificName contains "sp." , rank is "genus", otherwise "species". 
-all_spectra <- all_spectra %>% 
-  dplyr::mutate(taxonRank = case_when(
-    stringr::str_detect(scientificName, "sp.") ~ "genus",
-    TRUE ~ "species"
-  ))
-
-# count the number of genus vs species spectra
 all_spectra %>% 
   dplyr::distinct(uid.x, .keep_all=TRUE) %>%
   dplyr::group_by(taxonRank) %>% 
@@ -83,21 +71,15 @@ all_spectra %>%
   kableExtra::kable_styling(bootstrap_options = "striped", 
                             full_width = F, 
                             position = "left")
-
-# count the number of spectra per species (unique identifiers)
-species_count <- all_spectra %>% 
-  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
-  dplyr::group_by(scientificName) %>% 
-  dplyr::tally()
-
-
-# some scientificName entries have same genus and species, 
-# but may/may not have variation
-kableExtra::kable(head(species_count, n = 10)) %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", 
-                            full_width = F, 
-                            position = "left")
 ```
+
+
+```{r}
+# determine species of individuals with variations (next taxonomic level up)
+```
+
+
+
 
 There are 3 species with variations in the data set (identified manually for now): 
 
