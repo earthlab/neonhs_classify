@@ -117,36 +117,6 @@ all_spectra %>%
         legend.title = element_text(size = 14))
 ```
 
-Since the number of unique **individIDs** is not equal to the number of unique **uid.x**, take a closer look at the multiple spectra associated with a single individualID. 
-
-```{r}
-# single individualID associated with 4 spectra 
-spectrum <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
-
-# unique uid.x values: 
-as.character(unique(spectrum$uid.x))
-
-# unique date values: 
-as.character(unique(spectrum$date.x))
-
-# number of unique reflectance values
-length(unique(spectrum$reflectance))
-```
-
-This individualID is associated with four different uid.x values and four different dates values. 
-
-```{r fig.width=12}
-# plot the spectra associated with the same individualID
-spectrum %>% 
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
-  geom_line(aes(color = uid.x, linetype = uid.x), 
-            alpha = 0.5, size = 1) +
-  labs(title = paste("Reflectance spectrum, individualID:", spectrum$individualID)) + 
-  theme_bw()
-```
-
-<p style="color:green">VS-NOTE: all four reflectance spectra appear to be identical. it appears that they are each associated with a different date, but if they were truly extracted from 4 different NEON NIS image sets, we would expect the reflectance values to have some variation. How to deal with this? How to count the number of instances where this is occurring? </p>
 
 ### Explore the bands
 
@@ -165,15 +135,14 @@ kableExtra::kable(count_min_wavelengths) %>%
                             position = "left")
 ```
 
-Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 381nm. 
+Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 384nm. 
 
 ```{r}
 # find an individualID that starts with each of these wavelength band1 values
-as.character(all_spectra$individualID[all_spectra$wavelength_nm == 347][1])
-# 381 --> "NEON.PLA.D16.ABBY.01037"
-# 382 --> "NEON.PLA.D16.ABBY.01515"
-# 384 --> "NEON.PLA.D01.BART.02912"
-# 347 --> "NEON.PLA.D20.PUUM.08313"   weird? 
+as.character(all_spectra$individualID[all_spectra$wavelength_nm == 384][1])
+# 381 --> "NEON.PLA.D16.ABBY.01792"
+# 382 --> "NEON.PLA.D01.BART.02312"
+# 384 --> "NEON.PLA.D01.BART.02312"
 ```
 
 
@@ -249,6 +218,49 @@ Interpolate wavelength values to have the same 426 bands starting at 381nm, endi
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”).
 
 <p style="color:green">VS-NOTE: what percentage is standard for these? How to split based on the class imbalance?</p>
+
+
+
+
+
+
+
+
+
+Since the number of unique **individIDs** is not equal to the number of unique **uid.x**, take a closer look at the multiple spectra associated with a single individualID. 
+
+```{r}
+# single individualID associated with 4 spectra 
+spectrum <- all_spectra %>% 
+  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
+
+# unique uid.x values: 
+as.character(unique(spectrum$uid.x))
+
+# unique date values: 
+as.character(unique(spectrum$date.x))
+
+# number of unique reflectance values
+length(unique(spectrum$reflectance))
+```
+
+This individualID is associated with four different uid.x values and four different dates values. 
+
+```{r fig.width=12}
+# plot the spectra associated with the same individualID
+spectrum %>% 
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
+  geom_line(aes(color = uid.x, linetype = uid.x), 
+            alpha = 0.5, size = 1) +
+  labs(title = paste("Reflectance spectrum, individualID:", spectrum$individualID)) + 
+  theme_bw()
+```
+
+
+
+
+
+
 
 
 ### Output "clean dataset" 
