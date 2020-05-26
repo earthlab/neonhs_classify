@@ -63,59 +63,30 @@ length(unique(all_spectra$scientificName))
 How many taxonomic identifications are at the genus vs species level? (Using the NEON-provided taxon Rank data)
 
 ```{r}
-all_spectra %>% 
-  dplyr::distinct(uid.x, .keep_all=TRUE) %>%
+species_count <- all_spectra %>% 
+  dplyr::distinct(uid.x, .keep_all = TRUE) %>%
   dplyr::group_by(taxonRank) %>% 
   dplyr::tally() %>% 
   kableExtra::kable() %>%
   kableExtra::kable_styling(bootstrap_options = "striped", 
                             full_width = F, 
                             position = "left")
+
+species_count
 ```
 
 
 ```{r}
-# determine species of individuals with variations (next taxonomic level up)
+# create new columns for genus and species (disregard variations within species) 
+all_spectra <- all_spectra %>% 
+  tidyr::separate(scientificName, into = c('genus', 'species'), sep = ' ', 
+           extra = 'drop', remove = FALSE)
+
+length(unique(all_spectra$genus))
+
+length(unique(all_spectra$species))
 ```
 
-
-
-
-There are 3 species with variations in the data set (identified manually for now): 
-
-* *Acer saccharum Marshall*, *Acer saccharum Marshall var. saccharum*
-* *Cercis canadensis L.*, *Cercis canadensis L. var. canadensis*
-* *Pseudotsuga menziesii*, *Pseudotsuga menziesii (Mirb.) Franco var. menziesii*
-
-<p style="color:green">VS-NOTE: merge spectra species with its variations - give them the same taxonID label? </p>
-
-
-```{r, warning=FALSE, message=FALSE}
-# are there are any species classes that should be merged 
-species_var <- all_spectra %>% 
-  # first, duplicate the scientificName
-  dplyr::mutate(scientificNameTemp = scientificName) %>% 
-  # separate into genus and species using space as delimeter 
-  tidyr::separate(scientificNameTemp, c("genus", "speciesTemp"), " ", extra = "merge") %>% 
-  # separate into species and variation, if present
-  tidyr::separate(speciesTemp, c("species", "variation"), "var.", extra = "merge") %>% 
-  # select certain columns to assess
-  dplyr::select(c(scientificName, genus, species, variation)) %>% 
-  dplyr::distinct(scientificName, .keep_all=TRUE) %>% 
-  # alphabetical order
-  dplyr::arrange(scientificName) 
-  
-# show the number of spectra with species with multiple variations
-species_count %>% 
-  dplyr::filter(stringr::str_detect(scientificName, "Acer saccharum Marshall") | 
-                stringr::str_detect(scientificName, "Cercis canadensis L.") | 
-                stringr::str_detect(scientificName, "Pseudotsuga menziesii")) %>% 
-  kableExtra::kable() %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", 
-                            full_width = F, 
-                            position = "left")
-
-```
 
 ### Visualize spectra 
 
@@ -135,7 +106,7 @@ all_spectra %>%
   facet_wrap(~scientificName
              # wrap long scientific names
              ,labeller = label_wrap_gen(20)) + 
-  scale_color_manual(values = c("#e6550d","#1c9099")) + 
+  scale_color_manual(values = c("#e6550d","#1c9099", "#a8ddb5")) + 
   theme_minimal() + 
   # Adjust the text size and rotation angle 
   theme(text = element_text(size=11),
