@@ -138,63 +138,65 @@ kableExtra::kable(count_min_wavelengths) %>%
 Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 384nm. 
 
 ```{r}
-# find an individualID that starts with each of these wavelength band1 values
-as.character(all_spectra$individualID[all_spectra$wavelength_nm == 384][1])
-# 381 --> "NEON.PLA.D16.ABBY.01792"
-# 382 --> "NEON.PLA.D01.BART.02312"
-# 384 --> "NEON.PLA.D01.BART.02312"
+# find individualIDs that start with each of these wavelength band1 values
+all_spectra %>% 
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::filter(wavelength_nm == 384) %>% 
+  dplyr::select(individualID) %>% 
+  head(n = 6)
+
+# 381 --> "NEON.PLA.D19.DEJU.00376"
+# 382 --> "NEON.PLA.D06.UKFS.03259"
+# 384 --> "NEON.PLA.D05.STEI.01215"
 ```
 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 4 spectra to see their starting/ending wavelengths
+# plot all 3 spectra to see their starting/ending wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
-                                    "NEON.PLA.D16.ABBY.01037",
-                                    "NEON.PLA.D16.ABBY.01515",
-                                    "NEON.PLA.D01.BART.02912")) %>%
+  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
+                                    "NEON.PLA.D06.UKFS.03259",
+                                    "NEON.PLA.D05.STEI.01215")) %>%
   ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
   geom_line(aes(color = individualID), 
             alpha = 0.4) +
-  labs(title = "Four reflectance spectra, each with different starting wavelength") + 
+  labs(title = "Three reflectance spectra, each with different starting wavelength") + 
   theme_bw()
 ```
 
-<p style="color:green">VS-NOTE: Weird outlier starting at 347nm... creating plots to zoom into the beginning/end of the wavelength range</p>
+
 
 Beginning of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 4 spectra to see their starting/ending wavelengths
+# plot all 3 spectra to see their starting wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
-                                    "NEON.PLA.D16.ABBY.01037",
-                                    "NEON.PLA.D16.ABBY.01515",
-                                    "NEON.PLA.D01.BART.02912")) %>%
+  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
+                                    "NEON.PLA.D06.UKFS.03259",
+                                    "NEON.PLA.D05.STEI.01215")) %>%
   ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
   geom_line(aes(color = individualID), 
             alpha = 0.5, size = 1) +
-  labs(title = "Four spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
+  labs(title = "Three spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
   # zoom in on beginning of spectra
-  lims(x = c(340,400), y = c(0,0.5)) +
+  lims(x = c(380,400), y = c(0,0.5)) +
   theme_bw()
 ```
 
 End of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 4 spectra to see their starting/ending wavelengths
+# plot all 3 spectra to see their ending wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D20.PUUM.08313", 
-                                    "NEON.PLA.D16.ABBY.01037",
-                                    "NEON.PLA.D16.ABBY.01515",
-                                    "NEON.PLA.D01.BART.02912")) %>%
+  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
+                                    "NEON.PLA.D06.UKFS.03259",
+                                    "NEON.PLA.D05.STEI.01215")) %>%
   ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
   geom_line(aes(color = individualID), 
             alpha = 0.5, size = 1) +
-  labs(title = "Four spectra, each with different wavelengths. Zoom in on end of spectra") + 
+  labs(title = "Three spectra, each with different wavelengths. Zoom in on end of spectra") + 
   # zoom in on end of spectra
-  lims(x = c(2460,2520), y = c(0,0.3)) + 
+  lims(x = c(2480,2515), y = c(0,0.3)) + 
   theme_bw()
 ```
 
