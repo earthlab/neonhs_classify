@@ -235,10 +235,36 @@ interp_plt + # interpolated
 
 
 
+# interpolate all spectra efficiently using tidy and dplyr
+
+# define the target wavelengths.
+# use a larger range to get data on the ends.
+# with a 5nm spacing, add 10nm to each end, and 4 to the total number of wavelengths. 
+min_wl <- 384 
+max_wl <- 2512 
+num_wl <- 426
+wavelength_vals <- seq(min_wl - 10, max_wl + 10,
+                       length.out = num_wl + 4)
+
+# interpolate all spectra efficiently 
+interpolations <- all_spectra %>%
+  split(.$uid.x) %>%
+  pblapply(function(df) {
+    interpolated_reflectance <- approx(x= df$wavelength_nm, 
+                                       y = df$reflectance, 
+                                       xout = wavelength_vals)
+    tibble(uid.x = unique(df$uid.x), 
+           band_idx = seq_along(wavelength_vals), 
+           wavelength_nm = as.integer(interpolated_reflectance$x), 
+           reflectance = interpolated_reflectance$y)
+  }) %>%
+  bind_rows %>% 
+  # remove rows with wavelength values outside the range of interest 
+  dplyr::filter(wavelength_nm >= min_wl) %>% 
+  dplyr::filter(wavelength_nm <= max_wl)
 
 
-
-
+length(unique(interpolations$wavelength_nm))
 
 
 # create train, evaluation, & test set ------------------------------------

@@ -206,12 +206,17 @@ all_spectra %>%
 
 ### Standardize the bands: Interpolate wavelengths 
 
-Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. 
+Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range. 
 
 ```{r}
-# define the wavelengths to interpolate to
-wavelength_vals <- seq(384, 2512,
-                       length.out = 426)
+# define the target wavelengths.
+# use a larger range to get data on the ends.
+# with a 5nm spacing, add 10nm to each end, and 4 to the total number of wavelengths. 
+min_wl <- 384 
+max_wl <- 2512 
+num_wl <- 426
+wavelength_vals <- seq(min_wl - 10, max_wl + 10,
+                       length.out = num_wl + 4)
 
 # interpolate all spectra efficiently 
 interpolations <- all_spectra %>%
@@ -225,8 +230,10 @@ interpolations <- all_spectra %>%
            wavelength_nm = as.integer(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
   }) %>%
-  bind_rows
-
+  bind_rows %>% 
+  # remove rows with wavelength values outside the range of interest 
+  dplyr::filter(wavelength_nm >= min_wl) %>% 
+  dplyr::filter(wavelength_nm <= max_wl)
 ```
 
 ```{r}
@@ -236,7 +243,12 @@ Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelen
 
 <p style="color:green">VS-NOTE: need to merge the interpolated wavelengths back into the spectra data frame. Maybe make a copy, as the "cleaned" output version?</p>
 
-<p style="color:green">VS-NOTE: check values on the ends, need to remove / extrapolate? </p>
+```{r}
+cleaned_spectra <- all_spectra %>% 
+  dplyr::select
+```
+
+
 
 ```{r, fig.width=12}
 # plot all 3 interpolated spectra to see their starting wavelengths
@@ -255,13 +267,12 @@ interpolations %>%
 
 ### Standardize train, evaluation, & test set
 
-Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be splitt into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
+Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
 ```{r}
-train_percent = 
-test_percent = 
-eval_percent = 
-  
+train_percent = 0.7
+test_percent = 0.15
+eval_percent = 0.15
 
 ```
 
