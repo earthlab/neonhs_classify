@@ -196,7 +196,7 @@ all_spectra %>%
             alpha = 0.5, size = 1) +
   labs(title = "Three spectra, each with different wavelengths. Zoom in on end of spectra") + 
   # zoom in on end of spectra
-  lims(x = c(2480,2515), y = c(0,0.3)) + 
+  lims(x = c(2505,2515), y = c(0, 0.3)) + 
   theme_bw()
 ```
 
