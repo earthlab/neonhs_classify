@@ -13,7 +13,10 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(tidyr)
+library(tidyverse)
 library(kableExtra)
+library(reshape2)
+library(pbapply)
 ```
 
 ### Explore data
@@ -196,23 +199,56 @@ all_spectra %>%
             alpha = 0.5, size = 1) +
   labs(title = "Three spectra, each with different wavelengths. Zoom in on end of spectra") + 
   # zoom in on end of spectra
-  lims(x = c(2505,2515), y = c(0, 0.3)) + 
+  lims(x = c(2495,2515), y = c(0, 0.3)) + 
   theme_bw()
 ```
 
 
 ### Standardize the bands: Interpolate wavelengths 
 
-Interpolate wavelength values to have the same 426 bands starting at 381nm, ending at 2510nm, incrementing by 5nm. 
+Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. 
 
 ```{r}
+# define the wavelengths to interpolate to
+wavelength_vals <- seq(384, 2512,
+                       length.out = 426)
+
 # interpolate all spectra efficiently 
+interpolations <- all_spectra %>%
+  split(.$uid.x) %>%
+  pblapply(function(df) {
+    interpolated_reflectance <- approx(x= df$wavelength_nm, 
+                                       y = df$reflectance, 
+                                       xout = wavelength_vals)
+    tibble(uid.x = unique(df$uid.x), 
+           band_idx = seq_along(wavelength_vals), 
+           wavelength_nm = as.integer(interpolated_reflectance$x), 
+           reflectance = interpolated_reflectance$y)
+  }) %>%
+  bind_rows
 
 ```
 
+```{r}
+length(unique(interpolations$wavelength_nm))
+```
+Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelength values. 
+
+<p style="color:green">VS-NOTE: need to merge the interpolated wavelengths back into the spectra data frame. Maybe make a copy, as the "cleaned" output version?</p>
 
 ```{r}
-# plot original and interpolated reflectance spectrum
+# plot all 3 interpolated spectra to see their starting wavelengths
+interpolations %>% 
+  dplyr::filter(uid.x %in% c("0025a563-20b6-457c-9bc3-73f44c0c976c", 
+                             "0038ba14-553e-42bb-945f-395df5fdbdad",
+                             "050a6496-1037-461d-9289-82efa4feb17e")) %>% 
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
+  geom_line(aes(color = uid.x), 
+            alpha = 0.5, size = 1) +
+  labs(title = "Three spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
+  # zoom in on beginning of spectra
+  lims(x = c(380,400), y = c(0,0.1)) +
+  theme_bw()
 ```
 
 ### Standardize train, evaluation, & test set
@@ -220,46 +256,6 @@ Interpolate wavelength values to have the same 426 bands starting at 381nm, endi
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”).
 
 <p style="color:green">VS-NOTE: what percentage is standard for these? How to split based on the class imbalance?</p>
-
-
-
-
-
-
-
-
-
-Since the number of unique **individIDs** is not equal to the number of unique **uid.x**, take a closer look at the multiple spectra associated with a single individualID. 
-
-```{r}
-# single individualID associated with 4 spectra 
-spectrum <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") 
-
-# unique uid.x values: 
-as.character(unique(spectrum$uid.x))
-
-# unique date values: 
-as.character(unique(spectrum$date.x))
-
-# number of unique reflectance values
-length(unique(spectrum$reflectance))
-```
-
-This individualID is associated with four different uid.x values and four different dates values. 
-
-```{r fig.width=12}
-# plot the spectra associated with the same individualID
-spectrum %>% 
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
-  geom_line(aes(color = uid.x, linetype = uid.x), 
-            alpha = 0.5, size = 1) +
-  labs(title = paste("Reflectance spectrum, individualID:", spectrum$individualID)) + 
-  theme_bw()
-```
-
-
-
 
 
 
