@@ -238,7 +238,7 @@ Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelen
 
 <p style="color:green">VS-NOTE: check values on the ends, need to remove / extrapolate? </p>
 
-```{r}
+```{r, fig.width=12}
 # plot all 3 interpolated spectra to see their starting wavelengths
 interpolations %>% 
   dplyr::filter(uid.x %in% c("0025a563-20b6-457c-9bc3-73f44c0c976c", 
