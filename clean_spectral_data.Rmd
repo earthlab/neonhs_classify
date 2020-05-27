@@ -247,7 +247,7 @@ interpolations %>%
   ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
   geom_line(aes(color = uid.x), 
             alpha = 0.5, size = 1) +
-  labs(title = "Three spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
+  labs(title = "Three spectra, interpolated wavelengths! Zoom in on beginning of spectra") + 
   # zoom in on beginning of spectra
   lims(x = c(380,400), y = c(0,0.1)) +
   theme_bw()
