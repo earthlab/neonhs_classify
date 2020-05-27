@@ -255,9 +255,16 @@ interpolations %>%
 
 ### Standardize train, evaluation, & test set
 
-Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”).
+Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be splitt into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
-<p style="color:green">VS-NOTE: what percentage is standard for these? How to split based on the class imbalance?</p>
+```{r}
+train_percent = 
+test_percent = 
+eval_percent = 
+  
+
+```
+
 
 
 
