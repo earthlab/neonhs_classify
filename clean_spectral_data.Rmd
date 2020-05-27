@@ -236,6 +236,8 @@ Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelen
 
 <p style="color:green">VS-NOTE: need to merge the interpolated wavelengths back into the spectra data frame. Maybe make a copy, as the "cleaned" output version?</p>
 
+<p style="color:green">VS-NOTE: check values on the ends, need to remove / extrapolate? </p>
+
 ```{r}
 # plot all 3 interpolated spectra to see their starting wavelengths
 interpolations %>% 
