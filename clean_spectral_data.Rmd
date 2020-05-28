@@ -233,7 +233,12 @@ interp_wl <- all_spectra %>%
   bind_rows %>% 
   # remove rows with wavelength values outside the range of interest 
   dplyr::filter(wavelength_nm >= min_wl) %>% 
-  dplyr::filter(wavelength_nm <= max_wl)
+  dplyr::filter(wavelength_nm <= max_wl) %>% 
+  # update the bank_idx column to be band1, ... band426
+  dplyr::group_by(uid.x) %>% 
+  dplyr::arrange(wavelength_nm) %>%
+  dplyr::mutate(band_idx = paste0("band", 1:n())) %>%
+  dplyr::arrange(uid.x)
 
 # should be 426 unique wavelength values
 length(unique(interp_wl$wavelength_nm))
@@ -244,13 +249,11 @@ Merge the interpolated wavelengths and reflectance values into a copy of the dat
 
 ```{r}
 # make a copy of the original spectra 
-cleaned_spectra <- all_spectra 
-
-# merge in the interpolated wavelengths, based on uid.x
-
-
+cleaned_spectra <- all_spectra %>% 
+  dplyr::select(-c(wavelength_nm, reflectance)) %>% 
+  # merge in the interpolated wavelengths, based on uid.x and band_idx
+  dplyr::left_join(interp_wl)
 ```
-
 
 
 ```{r, fig.width=12}
@@ -273,9 +276,12 @@ interp_wl %>%
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
 ```{r}
-train_percent = 0.7
+train_percent = 0.70
 test_percent = 0.15
 eval_percent = 0.15
+
+# randomly sample all? 
+# threshold to remove
 
 ```
 
