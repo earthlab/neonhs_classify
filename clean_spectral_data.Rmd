@@ -275,7 +275,7 @@ interp_wl %>%
 
 How many samples per species? 
 
-```{r fig.height=12}
+```{r fig.height=12, fig.width = 10}
 thresh = 1
 
 # count number of samples (unique uid.x values) per species 
@@ -289,11 +289,31 @@ taxonCounts <- cleaned_spectra %>%
       n <= thresh ~ FALSE
     ))
 
+
+# count total number of uid samples across all species
+samplesCountTotal <- taxonCounts %>% 
+  summarise(sum(n))
+
+speciesCountTotal <- nrow(taxonCounts)
+
+# count total number of species with # samples greater than threshold
+samplesCountGT <- taxonCounts %>% 
+  filter(countGT == TRUE) %>% 
+  summarise(sum(n))
+speciesCountGT <- nrow(taxonCounts %>% 
+  filter(countGT == TRUE))
+
+
+
 ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) + 
   geom_bar(stat = "identity", aes(fill = countGT)) + 
-  labs(title = "Histogram of samples per species",
-       fill = "count greater than threshold") + 
-  theme_bw()
+  labs(title = paste("Histogram of samples per species.",
+                     speciesCountTotal, "total species;",
+                     speciesCountGT, "species with greater than",
+                     thresh, "samples"),
+       fill = paste("count greater than threshold", thresh)) + 
+  theme_bw() + 
+  scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
 ```
 
 
