@@ -208,7 +208,7 @@ all_spectra %>%
 
 Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range. 
 
-```{r}
+```{r, warning=FALSE}
 # define the target wavelengths.
 # use a larger range to get data on the ends.
 # with a 5nm spacing, add 10nm to each end, and 4 to the total number of wavelengths. 
@@ -219,7 +219,7 @@ wavelength_vals <- seq(min_wl - 10, max_wl + 10,
                        length.out = num_wl + 4)
 
 # interpolate all spectra efficiently 
-interpolations <- all_spectra %>%
+interp_wl <- all_spectra %>%
   split(.$uid.x) %>%
   pblapply(function(df) {
     interpolated_reflectance <- approx(x= df$wavelength_nm, 
@@ -234,25 +234,28 @@ interpolations <- all_spectra %>%
   # remove rows with wavelength values outside the range of interest 
   dplyr::filter(wavelength_nm >= min_wl) %>% 
   dplyr::filter(wavelength_nm <= max_wl)
+
+# should be 426 unique wavelength values
+length(unique(interp_wl$wavelength_nm))
 ```
 
-```{r}
-length(unique(interpolations$wavelength_nm))
-```
 Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelength values. 
-
-<p style="color:green">VS-NOTE: need to merge the interpolated wavelengths back into the spectra data frame. Maybe make a copy, as the "cleaned" output version?</p>
+Merge the interpolated wavelengths and reflectance values into a copy of the data frame. 
 
 ```{r}
-cleaned_spectra <- all_spectra %>% 
-  dplyr::select
+# make a copy of the original spectra 
+cleaned_spectra <- all_spectra 
+
+# merge in the interpolated wavelengths, based on uid.x
+
+
 ```
 
 
 
 ```{r, fig.width=12}
 # plot all 3 interpolated spectra to see their starting wavelengths
-interpolations %>% 
+interp_wl %>% 
   dplyr::filter(uid.x %in% c("0025a563-20b6-457c-9bc3-73f44c0c976c", 
                              "0038ba14-553e-42bb-945f-395df5fdbdad",
                              "050a6496-1037-461d-9289-82efa4feb17e")) %>% 
