@@ -439,7 +439,7 @@ set_lut[test_index, 2] <- "test"
 set_lut[eval_index, 2] <- "eval"
 
 # apply lookup table to the spectral data frame, add a new column for set label
-test <- filtered_spectra %>%
+filtered_spectra <- filtered_spectra %>%
    left_join(set_lut, by = "uid.x") 
 ```
 
@@ -448,5 +448,10 @@ There has to be a more efficient way to do this!
 
 ### Output "clean dataset" 
 
+```{r}
+write.csv(x = filtered_spectra,
+          file = here::here("data", "cleaned spectra.csv"),
+          row.names = FALSE)
+```
 
 
