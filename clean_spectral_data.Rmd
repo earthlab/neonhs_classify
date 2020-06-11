@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "5/25/2020 Earth Lab GRA"
+date: "6/11/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -271,9 +271,9 @@ interp_wl %>%
   theme_bw()
 ```
 
-### Standardize train, evaluation, & test set
+### Partition data into train, evaluation, & test sets
 
-How many samples per species? 
+How many samples per species? Might want to filter out species with one or very few samples. 
 
 ```{r fig.height=12, fig.width = 10}
 thresh = 1
@@ -357,23 +357,70 @@ ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) +
   scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
 ```
 
+```{r fig.height=12, fig.width = 10}
+thresh = 3
+
+# count number of samples (unique uid.x values) per species 
+taxonCounts <- cleaned_spectra %>% 
+    distinct(uid.x, .keep_all = TRUE) %>% 
+    group_by(taxonID) %>% 
+    tally() %>% 
+    # add a new column to indicate whether species count exceeds threshold
+    mutate(countGT = case_when(
+      n > thresh ~ TRUE,
+      n <= thresh ~ FALSE
+    ))
+
+
+# count total number of uid samples across all species
+samplesCountTotal <- taxonCounts %>% 
+  summarise(sum(n))
+
+speciesCountTotal <- nrow(taxonCounts)
+
+# count total number of species with # samples greater than threshold
+samplesCountGT <- taxonCounts %>% 
+  filter(countGT == TRUE) %>% 
+  summarise(sum(n))
+speciesCountGT <- nrow(taxonCounts %>% 
+  filter(countGT == TRUE))
+
+
+
+ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) + 
+  geom_bar(stat = "identity", aes(fill = countGT)) + 
+  labs(title = paste("Histogram of samples per species.",
+                     speciesCountTotal, "total species;",
+                     speciesCountGT, "species with greater than",
+                     thresh, "samples"),
+       fill = paste("count greater than threshold", thresh)) + 
+  theme_bw() + 
+  scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
+```
+
+```{r}
+# Filter out species with less than 3 samples 
+taxonCounts <- cleaned_spectra %>% 
+    distinct(uid.x, .keep_all = TRUE) %>% 
+    group_by(taxonID) %>% 
+    tally() %>% 
+  # remove taxonIDs with 2 samples or less
+  dplyr::filter(n>2)
+
+filtered_spectra <- cleaned_spectra %>%
+  dplyr::filter(taxonID %in% taxonCounts$taxonID)
+```
+
 
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
 ```{r}
-train_percent = 0.70
-test_percent = 0.15
-eval_percent = 0.15
+train_percent = 0.60
+test_percent = 0.20
+eval_percent = 0.20
 
-# randomly sample all? 
-# threshold to remove
 
 ```
-
-
-
-
-
 
 ### Output "clean dataset" 
 
