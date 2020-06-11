@@ -358,7 +358,7 @@ ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) +
 ```
 
 ```{r fig.height=12, fig.width = 10}
-thresh = 3
+thresh = 9
 
 # count number of samples (unique uid.x values) per species 
 taxonCounts <- cleaned_spectra %>% 
