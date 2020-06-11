@@ -415,16 +415,12 @@ filtered_spectra <- cleaned_spectra %>%
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
 ```{r}
-train_percent = 0.60
-test_percent = 0.20
-eval_percent = 0.20
-
 # list of all unique uid.x values
 unique_uids <- unique(filtered_spectra$uid.x)
 
 # Random sample indices
 set.seed(61)
-
+# train 0.6, test 0.2, eval 0.2
 train_index <- sample(1:length(unique_uids), 
                       0.6 * length(unique_uids))
 test_eval_indices <- setdiff(1:length(unique_uids), train_index)
@@ -443,8 +439,12 @@ set_lut[test_index, 2] <- "test"
 set_lut[eval_index, 2] <- "eval"
 
 # apply lookup table to the spectral data frame, add a new column for set label
-
+test <- filtered_spectra %>%
+   left_join(set_lut, by = "uid.x") 
 ```
+
+There has to be a more efficient way to do this! 
+
 
 ### Output "clean dataset" 
 
