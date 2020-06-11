@@ -438,6 +438,16 @@ set_lut[train_index, 2] <- "train"
 set_lut[test_index, 2] <- "test"
 set_lut[eval_index, 2] <- "eval"
 
+# see how many uid.x values are labeled as train, test, eval
+set_lut %>%
+  group_by(set) %>% 
+  tally() %>% 
+  mutate(percent = n / sum(n))
+```
+
+
+
+```{r}
 # apply lookup table to the spectral data frame, add a new column for set label
 filtered_spectra <- filtered_spectra %>%
    left_join(set_lut, by = "uid.x") 
