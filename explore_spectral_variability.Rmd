@@ -1,0 +1,66 @@
+---
+title: "Explore spectral variability"
+author: "Victoria Scholl"
+date: "6/11/2020"
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+
+Explore spectral variability for individuals with multiple observations across years.
+
+```{r read_data}
+all_spectra <- read.csv(here::here("data","all_spectra.csv"))
+
+# see which uid's have multiple observations over time 
+all_spectra %>%
+  group_by(individualID, date.x) %>% 
+  tally() 
+```
+
+
+```{r check_for_multiple_observations}
+indvdlIDs_with_multiple_obs <- all_spectra %>%
+  group_by(individualID) %>% 
+  tally() %>%
+  # 426 wavelengths (observations per uid)
+  filter(n>426)
+
+print(indvdlIDs_with_multiple_obs)
+```
+
+```{r plot_multiple_obs_per_indvdlID}
+
+#for(i in 1:nrow(indvdlIDs_with_multiple_obs)){
+
+i <- 1
+
+current_indvdlID <- as.character(indvdlIDs_with_multiple_obs$individualID[i])
+
+print(current_indvdlID)
+
+# list which dates have data for the current individual ID 
+all_spectra %>%
+  filter(individualID %in% current_indvdlID) %>%
+  group_by(individualID, date.x) %>% 
+  tally()
+
+# plot multiple spectra
+all_spectra %>%
+  filter(individualID %in% current_indvdlID) %>% 
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
+             color = date.x)) + 
+  geom_path() + 
+  theme_bw() + 
+  labs(x = '\n Wavelength (nm)',
+       y = 'Reflectance \n',
+       color = "Date",
+       title = paste0("Multiple observations for ", current_indvdlID))
+
+#}
+```
+
