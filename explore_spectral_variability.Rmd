@@ -32,14 +32,21 @@ indvdlIDs_with_multiple_obs <- all_spectra %>%
 
 print(indvdlIDs_with_multiple_obs)
 ```
+```{r}
+all_spectra %>%
+  distinct(individualID, uid.x) %>%
+  count(individualID) %>%
+  arrange(-n)
+```
 
 ```{r plot_multiple_obs_per_indvdlID}
 
 #for(i in 1:nrow(indvdlIDs_with_multiple_obs)){
 
-i <- 1
+i <- 3
 
 current_indvdlID <- as.character(indvdlIDs_with_multiple_obs$individualID[i])
+current_indvdlID <- "NEON.PLA.D01.BART.02934"
 
 print(current_indvdlID)
 
@@ -54,6 +61,7 @@ all_spectra %>%
   filter(individualID %in% current_indvdlID) %>% 
   ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
              color = date.x)) + 
+  facet_wrap(~uid.x) + 
   geom_path() + 
   theme_bw() + 
   labs(x = '\n Wavelength (nm)',
@@ -64,3 +72,5 @@ all_spectra %>%
 #}
 ```
 
+additional unique identifier idvdlID + date? 
+why are there multiple identical spectra for indvdlID, same date
