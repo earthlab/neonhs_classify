@@ -419,6 +419,30 @@ train_percent = 0.60
 test_percent = 0.20
 eval_percent = 0.20
 
+# list of all unique uid.x values
+unique_uids <- unique(filtered_spectra$uid.x)
+
+# Random sample indices
+set.seed(61)
+
+train_index <- sample(1:length(unique_uids), 
+                      0.6 * length(unique_uids))
+test_eval_indices <- setdiff(1:length(unique_uids), train_index)
+
+# further split into into test, eval
+test_index <- sample(test_eval_indices, 
+                      0.5 * length(test_eval_indices))
+
+eval_index <- setdiff(test_eval_indices, test_index)
+
+# create a lookup table with columns for uid.x and set name
+set_lut <- data.frame(uid.x = unique_uids,
+                      set = NA)
+set_lut[train_index, 2] <- "train"
+set_lut[test_index, 2] <- "test"
+set_lut[eval_index, 2] <- "eval"
+
+# apply lookup table to the spectral data frame, add a new column for set label
 
 ```
 
