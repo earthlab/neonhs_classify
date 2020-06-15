@@ -273,89 +273,7 @@ interp_wl %>%
 
 ### Partition data into train, evaluation, & test sets
 
-How many samples per species? Might want to filter out species with one or very few samples. 
-
-```{r fig.height=12, fig.width = 10}
-thresh = 1
-
-# count number of samples (unique uid.x values) per species 
-taxonCounts <- cleaned_spectra %>% 
-    distinct(uid.x, .keep_all = TRUE) %>% 
-    group_by(taxonID) %>% 
-    tally() %>% 
-    # add a new column to indicate whether species count exceeds threshold
-    mutate(countGT = case_when(
-      n > thresh ~ TRUE,
-      n <= thresh ~ FALSE
-    ))
-
-
-# count total number of uid samples across all species
-samplesCountTotal <- taxonCounts %>% 
-  summarise(sum(n))
-
-speciesCountTotal <- nrow(taxonCounts)
-
-# count total number of species with # samples greater than threshold
-samplesCountGT <- taxonCounts %>% 
-  filter(countGT == TRUE) %>% 
-  summarise(sum(n))
-speciesCountGT <- nrow(taxonCounts %>% 
-  filter(countGT == TRUE))
-
-
-
-ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) + 
-  geom_bar(stat = "identity", aes(fill = countGT)) + 
-  labs(title = paste("Histogram of samples per species.",
-                     speciesCountTotal, "total species;",
-                     speciesCountGT, "species with greater than",
-                     thresh, "samples"),
-       fill = paste("count greater than threshold", thresh)) + 
-  theme_bw() + 
-  scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
-```
-
-```{r fig.height=12, fig.width = 10}
-thresh = 2
-
-# count number of samples (unique uid.x values) per species 
-taxonCounts <- cleaned_spectra %>% 
-    distinct(uid.x, .keep_all = TRUE) %>% 
-    group_by(taxonID) %>% 
-    tally() %>% 
-    # add a new column to indicate whether species count exceeds threshold
-    mutate(countGT = case_when(
-      n > thresh ~ TRUE,
-      n <= thresh ~ FALSE
-    ))
-
-
-# count total number of uid samples across all species
-samplesCountTotal <- taxonCounts %>% 
-  summarise(sum(n))
-
-speciesCountTotal <- nrow(taxonCounts)
-
-# count total number of species with # samples greater than threshold
-samplesCountGT <- taxonCounts %>% 
-  filter(countGT == TRUE) %>% 
-  summarise(sum(n))
-speciesCountGT <- nrow(taxonCounts %>% 
-  filter(countGT == TRUE))
-
-
-
-ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) + 
-  geom_bar(stat = "identity", aes(fill = countGT)) + 
-  labs(title = paste("Histogram of samples per species.",
-                     speciesCountTotal, "total species;",
-                     speciesCountGT, "species with greater than",
-                     thresh, "samples"),
-       fill = paste("count greater than threshold", thresh)) + 
-  theme_bw() + 
-  scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
-```
+How many samples per species? Might want to filter out species with just a few samples. 
 
 ```{r fig.height=12, fig.width = 10}
 thresh = 9
@@ -443,17 +361,32 @@ set_lut %>%
   group_by(set) %>% 
   tally() %>% 
   mutate(percent = n / sum(n))
-```
 
-
-
-```{r}
 # apply lookup table to the spectral data frame, add a new column for set label
 filtered_spectra <- filtered_spectra %>%
    left_join(set_lut, by = "uid.x") 
 ```
 
-There has to be a more efficient way to do this! 
+
+```{r split_train_test_valid}
+# efficiently split into train, test, valid groups 
+set.seed(711)
+splits <- filtered_spectra %>%
+	distinct(uid.x) %>%
+	mutate(group = sample(c("train", "valid", "test"), n(), 
+	                      replace=TRUE, prob = c(.6, .2, .2)))
+
+# check the percentage of each group
+splits %>%
+  group_by(group) %>% 
+  tally() %>% 
+  mutate(percent = n / sum(n))
+
+# join these group labels into the spectra data frame 
+filtered_spectra <- filtered_spectra %>%
+	left_join(splits, by = "uid.x")
+```
+
 
 
 ### Output "clean dataset" 
