@@ -257,6 +257,43 @@ all_spectra %>%
 
 Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range. 
 
+```{r}
+# VS-NOTE debug interpolation issue
+
+trouble_spectrum <- all_spectra %>% 
+    dplyr::filter(spectraID %in% c("NEON.PLA.D11.CLBJ.00485_2017")) 
+
+message("reflectance value summary:")
+summary(trouble_spectrum$reflectance)
+
+message("wavelength value summary")
+summary(trouble_spectrum$wavelength_nm)
+
+# plot spectrum
+trouble_spectrum %>% 
+    ggplot(aes(x = wavelength_nm, y = reflectance)) +
+    geom_line() + 
+    labs(title = "NEON.PLA.D11.CLBJ.00485_2017") + 
+    theme_bw()
+
+# attempt to interpolate manually
+wl_orig <- trouble_spectrum %>% 
+  dplyr::select(band_idx, wavelength_nm, reflectance)
+
+wl_interp <- approx(x = wl_orig$wavelength_nm,
+                    y = wl_orig$reflectance,
+                    xout = wavelength_vals,
+                    method = "linear")
+
+# This works, but the function below still gets stuck on this spectraID
+# https://stackoverflow.com/questions/44386686/interpolation-function-approx-in-r-gives-error-need-at-least-two-non-na-valu
+# ^ says the approx function needs two complete (x,y) pairs, can't have duplicated x values
+
+
+
+```
+
+
 ```{r, warning=FALSE}
 # define the target wavelengths.
 # use a larger range to get data on the ends.
@@ -278,6 +315,14 @@ interp_wl <- all_spectra %>%
            band_idx = seq_along(wavelength_vals), 
            wavelength_nm = as.integer(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
+    
+    #VS-NOTE: debug
+    print(as.character(unique(df$spectraID))) 
+    if(df$spectraID %in% c("NEON.PLA.D11.CLBJ.00485_2017")){
+      print(df$wavelength_nm)
+      print(df$reflectance)
+    }
+    
   }) %>%
   bind_rows %>% 
   # remove rows with wavelength values outside the range of interest 
