@@ -26,8 +26,8 @@ Read original spectra, extracted using NEON data, by mbjoseph: https://gist.gith
 Columns: 
 
 * **individualID** - unique identifier for each individual plant. Individuals can have multiple measurements over time.
-* **spectraID** - individual ID with year (YYYY) of plant observation/record
 * **uid** - unique identifier for the observation/record
+* **spectraID** - unique identifier for each reflectance spectrum (a combination of individualID and year, YYYY )
 * **namedLocation** - name of measurement location in NEON database
 * **utmZone, adjEasting, adjNorthing** - UTM zone and coordinates of mapped stem
 * **taxonID** - species code
@@ -41,14 +41,19 @@ Columns:
 
 ```{r}
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
+
+# quick look at the values in each column
+glimpse(all_spectra)
 ```
 
-Number of unique **individualID** & **uid.x** values: 
+Number of unique **individualID**, **uid**, **spectraID** values: 
 
 ```{r, message=TRUE}
 length(unique(all_spectra$individualID))
 
-length(unique(all_spectra$uid.x))
+length(unique(all_spectra$uid))
+
+length(unique(all_spectra$spectraID))
 ```
 
 Number of unique **scientificName** & **taxonID** values (these should match):
@@ -63,7 +68,7 @@ How many taxonomic identifications are at the genus vs species level? (Using the
 
 ```{r}
 species_count <- all_spectra %>% 
-  dplyr::distinct(uid.x, .keep_all = TRUE) %>%
+  dplyr::distinct(spectraID, .keep_all = TRUE) %>%
   dplyr::group_by(taxonRank) %>% 
   dplyr::tally() %>% 
   kableExtra::kable() %>%
