@@ -152,6 +152,21 @@ kableExtra::kable(count_min_wavelengths) %>%
                             position = "left")
 ```
 
+Filter spectra with starting wavelengths <380nm for now, since they complicate the wavelength interpolation
+
+```{r}
+# identify spectraID values that start at 347nm
+spectra_to_remove <- all_spectra %>%
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::filter(wavelength_nm == 347) %>% 
+  dplyr::select(spectraID)
+
+# remove these spectra from the data set
+all_spectra <- all_spectra %>% 
+  dplyr::filter(!(spectraID %in% spectra_to_remove$spectraID))
+```
+
+
 Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 384nm. 
 
 ```{r}
@@ -180,7 +195,7 @@ for(wl in unique(count_min_wavelengths$wavelength_nm)){
 ```{r warning=FALSE, fig.width=12}
 # plot all spectra to see their starting/ending wavelengths
 all_spectra %>% 
-  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+  dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
                                  "NEON.PLA.D01.HARV.09041_2018",
                                  "NEON.PLA.D08.DELA.03903_2017")) %>%
@@ -196,7 +211,7 @@ Beginning of wavelength range:
 ```{r warning=FALSE, fig.width=12}
 # plot all spectra to see their starting wavelengths
 all_spectra %>% 
-  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+  dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
                                  "NEON.PLA.D01.HARV.09041_2018",
                                  "NEON.PLA.D08.DELA.03903_2017")) %>%
@@ -214,7 +229,7 @@ End of wavelength range:
 ```{r warning=FALSE, fig.width=12}
 # plot all spectra to see their ending wavelengths
 all_spectra %>% 
-  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+  dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
                                  "NEON.PLA.D01.HARV.09041_2018",
                                  "NEON.PLA.D08.DELA.03903_2017")) %>%
@@ -258,7 +273,7 @@ interp_wl <- all_spectra %>%
   # remove rows with wavelength values outside the range of interest 
   dplyr::filter(wavelength_nm >= min_wl) %>% 
   dplyr::filter(wavelength_nm <= max_wl) %>% 
-  # update the bank_idx column to be band1, ... band426
+  # update the band_idx column to be band1, ... band426
   dplyr::group_by(spectraID) %>% 
   dplyr::arrange(wavelength_nm) %>%
   dplyr::mutate(band_idx = paste0("band", 1:n())) %>%
@@ -281,7 +296,7 @@ cleaned_spectra <- all_spectra %>%
 
 
 ```{r, fig.width=12}
-# plot all 3 interpolated spectra to see their starting wavelengths
+# plot interpolated spectra to see their starting wavelengths
 interp_wl %>% 
   dplyr::filter(uid.x %in% c("0025a563-20b6-457c-9bc3-73f44c0c976c", 
                              "0038ba14-553e-42bb-945f-395df5fdbdad",
