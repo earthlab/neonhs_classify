@@ -177,7 +177,6 @@ for(wl in unique(count_min_wavelengths$wavelength_nm)){
 # 384 --> "NEON.PLA.D08.DELA.03903_2017"
 ```
 
-
 ```{r warning=FALSE, fig.width=12}
 # plot all spectra to see their starting/ending wavelengths
 all_spectra %>% 
@@ -191,8 +190,6 @@ all_spectra %>%
   labs(title = "Spectra with different starting wavelengths") + 
   theme_bw()
 ```
-
-
 
 Beginning of wavelength range: 
 
@@ -271,7 +268,7 @@ interp_wl <- all_spectra %>%
 length(unique(interp_wl$wavelength_nm))
 ```
 
-Now, each spectrum (designated by a unique uid.x value) has the same 426 wavelength values. 
+Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. 
 Merge the interpolated wavelengths and reflectance values into a copy of the data frame. 
 
 ```{r}
