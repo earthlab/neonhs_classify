@@ -49,18 +49,23 @@ glimpse(all_spectra)
 Number of unique **individualID**, **uid**, **spectraID** values: 
 
 ```{r, message=TRUE}
+message("# of unique individualID values:")
 length(unique(all_spectra$individualID))
 
+message("# of unique uid values:")
 length(unique(all_spectra$uid))
 
+message("# of unique spectraID (uid + year) values:")
 length(unique(all_spectra$spectraID))
 ```
 
 Number of unique **scientificName** & **taxonID** values (these should match):
 
 ```{r}
+message("# of unique taxonID values:")
 length(unique(all_spectra$taxonID))
 
+message("# of unique scientificName values:")
 length(unique(all_spectra$scientificName))
 ```
 
@@ -79,15 +84,23 @@ species_count <- all_spectra %>%
 species_count
 ```
 
+Filter the spectra to keep only those classified at the genus, species, and variety taxon ranks. Add new columns for genus and species by separating the **scientificName** field. 
 
 ```{r}
+# remove entries with taxonRank kingdom, family (maintain only genus, species, variety ranks)
+all_spectra <- all_spectra %>% 
+  dplyr::filter(taxonRank %in% c("genus", "species", "variety"))
+
+
 # create new columns for genus and species (disregard variations within species) 
 all_spectra <- all_spectra %>% 
   tidyr::separate(scientificName, into = c('genus', 'species'), sep = ' ', 
            extra = 'drop', remove = FALSE)
 
+message("# of unique genus values:")
 length(unique(all_spectra$genus))
 
+message("# of unique species values:")
 length(unique(all_spectra$species))
 ```
 
@@ -100,7 +113,7 @@ Plot all spectra; color the spectra based on genus/species taxonomic level.
 
 ```{r, warning=FALSE, fig.height=16, fig.width=14}
 all_spectra %>%
-  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = spectraID,
              # color each facet plot based on taxonRank
              color = taxonRank)) +
   geom_path(alpha = .2) +
@@ -142,29 +155,40 @@ kableExtra::kable(count_min_wavelengths) %>%
 Spectra have different starting wavelengths (i.e. 381, 383, 385nm...) and increase in increments of 5nm. Most of them start at 384nm. 
 
 ```{r}
-# find individualIDs that start with each of these wavelength band1 values
-all_spectra %>% 
-  dplyr::filter(band_idx == "band1") %>% 
-  dplyr::filter(wavelength_nm == 384) %>% 
-  dplyr::select(individualID) %>% 
-  head(n = 6)
+set.seed(44) #for obama
 
-# 381 --> "NEON.PLA.D19.DEJU.00376"
-# 382 --> "NEON.PLA.D06.UKFS.03259"
-# 384 --> "NEON.PLA.D05.STEI.01215"
+# find individualIDs that start with each of these wavelength band1 values
+for(wl in unique(count_min_wavelengths$wavelength_nm)){
+  
+  tmp <- all_spectra %>% 
+    dplyr::filter(band_idx == "band1") %>% 
+    dplyr::filter(wavelength_nm == wl) %>% 
+    dplyr::select(spectraID) %>% 
+    sample_n(1)
+  
+  message(paste("spectraID starting at", wl, "nm: ", as.character(tmp$spectraID)))
+  
+}
+
+# here are spectraID values for each of the starting wavelengths
+# 347 --> "NEON.PLA.D20.PUUM.00954_2019"
+# 381 --> "NEON.PLA.D11.CLBJ.00496_2018"
+# 382 --> "NEON.PLA.D01.HARV.09041_2018"
+# 384 --> "NEON.PLA.D08.DELA.03903_2017"
 ```
 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 3 spectra to see their starting/ending wavelengths
+# plot all spectra to see their starting/ending wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
-                                    "NEON.PLA.D06.UKFS.03259",
-                                    "NEON.PLA.D05.STEI.01215")) %>%
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
-  geom_line(aes(color = individualID), 
+  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+                                 "NEON.PLA.D11.CLBJ.00496_2018", 
+                                 "NEON.PLA.D01.HARV.09041_2018",
+                                 "NEON.PLA.D08.DELA.03903_2017")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = spectraID)) +
+  geom_line(aes(color = spectraID), 
             alpha = 0.4) +
-  labs(title = "Three reflectance spectra, each with different starting wavelength") + 
+  labs(title = "Spectra with different starting wavelengths") + 
   theme_bw()
 ```
 
@@ -173,34 +197,36 @@ all_spectra %>%
 Beginning of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 3 spectra to see their starting wavelengths
+# plot all spectra to see their starting wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
-                                    "NEON.PLA.D06.UKFS.03259",
-                                    "NEON.PLA.D05.STEI.01215")) %>%
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
-  geom_line(aes(color = individualID), 
+  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+                                 "NEON.PLA.D11.CLBJ.00496_2018", 
+                                 "NEON.PLA.D01.HARV.09041_2018",
+                                 "NEON.PLA.D08.DELA.03903_2017")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = spectraID)) +
+  geom_line(aes(color = spectraID), 
             alpha = 0.5, size = 1) +
-  labs(title = "Three spectra, each with different wavelengths. Zoom in on beginning of spectra") + 
+  labs(title = "Spectra with different wavelengths: zoom in on beginning of spectra") + 
   # zoom in on beginning of spectra
-  lims(x = c(380,400), y = c(0,0.5)) +
+  lims(x = c(347,400), y = c(0,0.3)) +
   theme_bw()
 ```
 
 End of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all 3 spectra to see their ending wavelengths
+# plot all spectra to see their ending wavelengths
 all_spectra %>% 
-  dplyr::filter(individualID %in% c("NEON.PLA.D19.DEJU.00376", 
-                                    "NEON.PLA.D06.UKFS.03259",
-                                    "NEON.PLA.D05.STEI.01215")) %>%
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = individualID)) +
-  geom_line(aes(color = individualID), 
+  dplyr::filter(spectraID %in% c("NEON.PLA.D20.PUUM.00954_2019",
+                                 "NEON.PLA.D11.CLBJ.00496_2018", 
+                                 "NEON.PLA.D01.HARV.09041_2018",
+                                 "NEON.PLA.D08.DELA.03903_2017")) %>%
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = spectraID)) +
+  geom_line(aes(color = spectraID), 
             alpha = 0.5, size = 1) +
-  labs(title = "Three spectra, each with different wavelengths. Zoom in on end of spectra") + 
+  labs(title = "Spectra each with different wavelengths: zoom in on end of spectra") + 
   # zoom in on end of spectra
-  lims(x = c(2495,2515), y = c(0, 0.3)) + 
+  lims(x = c(2455,2515), y = c(0, 0.3)) + 
   theme_bw()
 ```
 
@@ -221,12 +247,12 @@ wavelength_vals <- seq(min_wl - 10, max_wl + 10,
 
 # interpolate all spectra efficiently 
 interp_wl <- all_spectra %>%
-  split(.$uid.x) %>%
+  split(.$spectraID) %>%
   pblapply(function(df) {
     interpolated_reflectance <- approx(x= df$wavelength_nm, 
                                        y = df$reflectance, 
                                        xout = wavelength_vals)
-    tibble(uid.x = unique(df$uid.x), 
+    tibble(spectraID = unique(df$spectraID), 
            band_idx = seq_along(wavelength_vals), 
            wavelength_nm = as.integer(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
@@ -236,10 +262,10 @@ interp_wl <- all_spectra %>%
   dplyr::filter(wavelength_nm >= min_wl) %>% 
   dplyr::filter(wavelength_nm <= max_wl) %>% 
   # update the bank_idx column to be band1, ... band426
-  dplyr::group_by(uid.x) %>% 
+  dplyr::group_by(spectraID) %>% 
   dplyr::arrange(wavelength_nm) %>%
   dplyr::mutate(band_idx = paste0("band", 1:n())) %>%
-  dplyr::arrange(uid.x)
+  dplyr::arrange(spectraID)
 
 # should be 426 unique wavelength values
 length(unique(interp_wl$wavelength_nm))
