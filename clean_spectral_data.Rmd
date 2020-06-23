@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "6/11/2020 Earth Lab GRA"
+date: "6/25/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -26,16 +26,12 @@ Read original spectra, extracted using NEON data, by mbjoseph: https://gist.gith
 Columns: 
 
 * **individualID** - unique identifier for each individual plant. Individuals can have multiple measurements over time.
-* **date.x** - date of plant measurement/observation
-* **uid.x** - unique identifier for the record
+* **spectraID** - individual ID with year (YYYY) of plant observation/record
+* **uid** - unique identifier for the observation/record
 * **namedLocation** - name of measurement location in NEON database
-* **api.utmZone, adjEasting, adjNorthing** - UTM zone and coordinates of mapped stem
-* **plantStatus** - physical status of the individual
-* **growthForm** - growth form classification (sapling, tree, number of boles, etc.)
-* **stemDiameter, measurementHeight** - diameter of stem and height at which it was measured 
-* **height** - plant height 
+* **utmZone, adjEasting, adjNorthing** - UTM zone and coordinates of mapped stem
 * **taxonID** - species code
-* **scientificName** - scientific name, associated with taxonID, lowest taxonomic rank that can be determined.
+* **scientificName** - scientific name, associated with taxonID, lowest taxonomic rank that can be determined
 * **taxonRank** - lowest level taxonomic rank that can be determined for the individual (genus, species, variety)
 * **band_idx** - number of the spectral band (band1, band 2, ... band 426)
 * **wavelength_nm** - band wavelength in units of nm
