@@ -1,7 +1,7 @@
 ---
 title: "Explore spectral variability"
 author: "Victoria Scholl"
-date: "6/11/2020"
+date: "6/25/2020"
 output: html_document
 ---
 
@@ -15,61 +15,50 @@ Explore spectral variability for individuals with multiple observations across y
 
 ```{r read_data}
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
-
-# see which uid's have multiple observations over time 
-all_spectra %>%
-  group_by(individualID, date.x) %>% 
-  tally() 
 ```
-
 
 ```{r check_for_multiple_observations}
-indvdlIDs_with_multiple_obs <- all_spectra %>%
-  group_by(individualID) %>% 
-  tally() %>%
-  # 426 wavelengths (observations per uid)
-  filter(n>426)
+# see which uid's have multiple observations over time 
+count_obs <- all_spectra %>%
+  dplyr::group_by(individualID) %>% 
+  filter(band_idx == "band1") %>%
+  tally() 
 
-print(indvdlIDs_with_multiple_obs)
+table(count_obs$n)
 ```
+
+Most individualIDs have just one spectrum, while others have two or three in the data set. 
+
 ```{r}
 all_spectra %>%
-  distinct(individualID, uid.x) %>%
+  distinct(individualID, spectraID) %>%
   count(individualID) %>%
   arrange(-n)
 ```
 
 ```{r plot_multiple_obs_per_indvdlID}
-
-#for(i in 1:nrow(indvdlIDs_with_multiple_obs)){
-
-i <- 3
-
-current_indvdlID <- as.character(indvdlIDs_with_multiple_obs$individualID[i])
-current_indvdlID <- "NEON.PLA.D01.BART.02934"
-
-print(current_indvdlID)
+current_indvdlID <- "NEON.PLA.D03.JERC.02220"
+current_indvdlID <- "NEON.PLA.D03.OSBS.02053"
 
 # list which dates have data for the current individual ID 
 all_spectra %>%
   filter(individualID %in% current_indvdlID) %>%
-  group_by(individualID, date.x) %>% 
+  group_by(spectraID) %>% 
   tally()
 
 # plot multiple spectra
 all_spectra %>%
   filter(individualID %in% current_indvdlID) %>% 
-  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = uid.x,
-             color = date.x)) + 
-  facet_wrap(~uid.x) + 
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = year,
+             color = year)) + 
+  facet_wrap(~year) + 
   geom_path() + 
   theme_bw() + 
+  theme(legend.position = "none") + 
   labs(x = '\n Wavelength (nm)',
        y = 'Reflectance \n',
        color = "Date",
        title = paste0("Multiple observations for ", current_indvdlID))
-
-#}
 ```
 
 additional unique identifier idvdlID + date? 
