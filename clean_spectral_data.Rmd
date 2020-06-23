@@ -164,6 +164,16 @@ spectra_to_remove <- all_spectra %>%
 # remove these spectra from the data set
 all_spectra <- all_spectra %>% 
   dplyr::filter(!(spectraID %in% spectra_to_remove$spectraID))
+
+# how many different starting wavelength values in the filtered data set? 
+all_spectra %>%
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::group_by(wavelength_nm) %>%
+  dplyr::count(wavelength_nm) %>% 
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", 
+                            full_width = F, 
+                            position = "left")
 ```
 
 
@@ -290,7 +300,7 @@ Merge the interpolated wavelengths and reflectance values into a copy of the dat
 # make a copy of the original spectra 
 cleaned_spectra <- all_spectra %>% 
   dplyr::select(-c(wavelength_nm, reflectance)) %>% 
-  # merge in the interpolated wavelengths, based on uid.x and band_idx
+  # merge in the interpolated wavelengths
   dplyr::left_join(interp_wl)
 ```
 
