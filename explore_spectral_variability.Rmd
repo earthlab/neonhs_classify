@@ -8,10 +8,12 @@ output: html_document
 ```{r setup, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
+library(tidyr)
+library(stringr)
 ```
 
 
-Explore spectral variability for individuals with multiple observations across years.
+## Spectral variability for individuals with multiple observations across years.
 
 ```{r read_data}
 all_spectra <- read.csv(here::here("data","all_spectra.csv"))
@@ -61,5 +63,18 @@ all_spectra %>%
        title = paste0("Multiple observations for ", current_indvdlID))
 ```
 
-additional unique identifier idvdlID + date? 
-why are there multiple identical spectra for indvdlID, same date
+## Spectra with 347nm starting wavelength
+
+```{r}
+spectraIDs_347nm <- all_spectra %>%
+  dplyr::filter(band_idx == "band1") %>% 
+  dplyr::filter(wavelength_nm == 347) %>% 
+  dplyr::select(spectraID)
+
+# split the spectraID strings to see which site is causing the 347nm starting wavelength
+spectraIDs_347nm$neon_site <- stringr::str_split(as.character(spectraIDs_347nm$spectraID),
+                   pattern = "[.]")[[1]][4]
+
+print(unique(spectraIDs_347nm$neon_site))
+```
+
