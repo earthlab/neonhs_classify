@@ -16,11 +16,11 @@ library(stringr)
 ## Spectral variability for individuals with multiple observations across years.
 
 ```{r read_data}
-all_spectra <- read.csv(here::here("data","all_spectra.csv"))
+all_spectra <- read.csv(here::here("data","cleaned_spectra.csv"))
 ```
 
 ```{r check_for_multiple_observations}
-# see which uid's have multiple observations over time 
+# see which individuals have multiple observations over time 
 count_obs <- all_spectra %>%
   dplyr::group_by(individualID) %>% 
   filter(band_idx == "band1") %>%
@@ -32,41 +32,43 @@ table(count_obs$n)
 Most individualIDs have just one spectrum, while others have two or three in the data set. 
 
 ```{r}
-all_spectra %>%
+# find the individualIDs with more than 2 yearly observations
+individuals_mult_obs <- all_spectra %>%
   distinct(individualID, spectraID) %>%
   count(individualID) %>%
   arrange(-n) %>% 
-  head(n = 10)
+  filter(n>2) %>%
+  head(n = 25)
 ```
 
 
-```{r plot_multiple_obs_per_indvdlID}
+```{r plot_multiple_obs_per_indvdlID, fig.height=10}
 current_indvdlID <- "NEON.PLA.D03.JERC.02220"
 current_indvdlID <- "NEON.PLA.D03.OSBS.02053"
+current_indvdlID <- "NEON.PLA.D08.DELA.04982"
+current_indvdlID <- "NEON.PLA.D08.LENO.08763"
+current_indvdlID <- "NEON.PLA.D13.NIWO.01346"
 
 # list which dates have data for the current individual ID 
-all_spectra %>%
-  filter(individualID %in% current_indvdlID) %>%
-  group_by(spectraID) %>% 
-  tally()
+#all_spectra %>%
+#  filter(individualID %in% current_indvdlID) %>%
+#  group_by(spectraID) %>% 
+#  tally()
 
 # plot multiple spectra
 all_spectra %>%
-  filter(individualID %in% current_indvdlID) %>% 
-  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = year,
-             color = year)) + 
-  facet_wrap(~year) + 
+  filter(individualID %in% individuals_mult_obs$individualID) %>% 
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), 
+             group = spectraID,
+             color = as.factor(year))) + 
+  facet_wrap(~individualID) + 
   geom_path() + 
-  theme_bw() + 
-  theme(legend.position = "none") + 
+  theme_minimal() + 
+  scale_color_brewer(palette = "Accent") +
   labs(x = '\n Wavelength (nm)',
        y = 'Reflectance \n',
-       color = "Date",
-       title = paste0("Multiple observations for ", current_indvdlID))
-
-# VS-NOTE: 
-color by year, facet by individual
-
+       color = "Year",
+       title = paste0("Reflectance variation across years per individual"))
 ```
 
 ```{r}
