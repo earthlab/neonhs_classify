@@ -1,7 +1,7 @@
 ---
 title: "Explore spectral variability"
 author: "Victoria Scholl"
-date: "6/25/2020"
+date: "07/08/2020"
 output: html_document
 ---
 
@@ -37,12 +37,15 @@ individuals_mult_obs <- all_spectra %>%
   distinct(individualID, spectraID) %>%
   count(individualID) %>%
   arrange(-n) %>% 
-  filter(n>2) %>%
+  filter(n>2)
+  
+individuals_mult_obs_subset <- individuals_mult_obs %>%
   head(n = 25)
+
+individuals_mult_obs_subset %>% head(5)
 ```
 
-
-```{r plot_multiple_obs_per_indvdlID, fig.height=10}
+```{r multiple_years_per_individual, include=FALSE}
 current_indvdlID <- "NEON.PLA.D03.JERC.02220"
 current_indvdlID <- "NEON.PLA.D03.OSBS.02053"
 current_indvdlID <- "NEON.PLA.D08.DELA.04982"
@@ -54,10 +57,13 @@ current_indvdlID <- "NEON.PLA.D13.NIWO.01346"
 #  filter(individualID %in% current_indvdlID) %>%
 #  group_by(spectraID) %>% 
 #  tally()
+```
 
-# plot multiple spectra
+```{r plot_multiple_obs_per_indvdlID, fig.height=10}
+# plot spectra with multiple observations across years. 
+# facet by individual, color by year
 all_spectra %>%
-  filter(individualID %in% individuals_mult_obs$individualID) %>% 
+  filter(individualID %in% individuals_mult_obs_subset$individualID) %>% 
   ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), 
              group = spectraID,
              color = as.factor(year))) + 
@@ -71,31 +77,32 @@ all_spectra %>%
        title = paste0("Reflectance variation across years per individual"))
 ```
 
-```{r}
-# standard deviation for individuals across multiple years 
-all_spectra %>% 
+```{r sd_within_species}
+# standard deviation for within species
+sd_data_to_plot <- all_spectra %>% 
   # filter to keep only individualIDs with 3 
-  group_by(individualID, wavelength_nm) %>%
-  summarize(sd = sd(reflectance))
-  
-# using aggregate method 
-sd_spectra <- aggregate(all_spectra$reflectance, by=list(all_spectra$individualID, all_spectra$wavelength_nm), 
-          FUN=sd)
+  filter(individualID %in% individuals_mult_obs$individualID) %>%
+  # create a new column with genus and species
+  unite(genusSpecies, c(genus, species), sep = " ") %>%
+  group_by(wavelength_nm, genusSpecies, mask) %>%
+  # calculate standard deviation within species
+  summarize(sd = sd(reflectance)) 
+
+sd_data_to_plot%>% 
+  ggplot(aes(wavelength_nm, 
+             ifelse(mask, NA, sd)),
+         group = genusSpecies)+
+  facet_wrap(~genusSpecies) + 
+  geom_point(color = "steelblue", size =0.5) + 
+  theme_minimal() + 
+  scale_color_brewer(palette = "Accent") +
+  labs(x = '\n Wavelength (nm)',
+       y = 'Standard Deviation \n',
+       color = "Year",
+       title = paste0("Standard deviation variation within species"))
 ```
 
 
-<span style="color:red">To do: 
-
-* standard deviation within species
-* facet by species, scatter plot x - wavelength, y - standard deviation
-* Patterns of variation across species? 
-
-</span>, 
-
-
-# VS-NOTE: standard deviation within species
-# Facet by species, scatter plot x - wavelength, y - standard deviation
-# Patterns of variation across species? 
 
 
 ## Spectra with 347nm starting wavelength
