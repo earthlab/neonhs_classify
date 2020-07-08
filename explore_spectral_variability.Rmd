@@ -77,6 +77,8 @@ all_spectra %>%
        title = paste0("Reflectance variation across years per individual"))
 ```
 
+## Standard Deviation variation within species as a function of wavelength 
+
 ```{r sd_within_species, fig.height=12, fig.width=10}
 # standard deviation for within species
 sd_data_to_plot <- all_spectra %>% 
