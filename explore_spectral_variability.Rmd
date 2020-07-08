@@ -59,7 +59,7 @@ current_indvdlID <- "NEON.PLA.D13.NIWO.01346"
 #  tally()
 ```
 
-```{r plot_multiple_obs_per_indvdlID, fig.height=10}
+```{r plot_multiple_obs_per_indvdlID, fig.height=12, fig.width=10}
 # plot spectra with multiple observations across years. 
 # facet by individual, color by year
 all_spectra %>%
@@ -77,7 +77,7 @@ all_spectra %>%
        title = paste0("Reflectance variation across years per individual"))
 ```
 
-```{r sd_within_species}
+```{r sd_within_species, fig.height=12, fig.width=10}
 # standard deviation for within species
 sd_data_to_plot <- all_spectra %>% 
   # filter to keep only individualIDs with 3 
@@ -93,12 +93,22 @@ sd_data_to_plot%>%
              ifelse(mask, NA, sd)),
          group = genusSpecies)+
   facet_wrap(~genusSpecies) + 
-  geom_point(color = "steelblue", size =0.5) + 
+  geom_point(aes(color=sd), size =0.5) + 
   theme_minimal() + 
-  scale_color_brewer(palette = "Accent") +
+  scale_color_gradient2(#low = 'yellow',
+                        mid = 'blue',  
+                        high = 'red',
+                        # set midpoint as the median of SD values
+                        midpoint = median(sd_data_to_plot$sd, na.rm=TRUE),
+                        # set the color limits as the min and max SD values
+                        limits = c(floor(min(sd_data_to_plot$sd, na.rm=TRUE)), 
+                                   ceiling(max(sd_data_to_plot$sd, na.rm=TRUE))),
+                        # set point color for NA values
+                        na.value = 'black',
+                        space = 'Lab')+
   labs(x = '\n Wavelength (nm)',
        y = 'Standard Deviation \n',
-       color = "Year",
+       color = "SD",
        title = paste0("Standard deviation variation within species"))
 ```
 
@@ -107,7 +117,7 @@ sd_data_to_plot%>%
 
 ## Spectra with 347nm starting wavelength
 
-```{r}
+```{r include=FALSE, eval=FALSE}
 spectraIDs_347nm <- all_spectra %>%
   dplyr::filter(band_idx == "band1") %>% 
   dplyr::filter(wavelength_nm == 347) %>% 
