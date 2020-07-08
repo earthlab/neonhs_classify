@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "6/25/2020 Earth Lab GRA"
+date: "07/09/2020 Earth Lab GRA"
 output: html_document
 ---
 
