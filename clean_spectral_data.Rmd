@@ -40,7 +40,8 @@ Columns:
 
 
 ```{r}
-all_spectra <- read.csv(here::here("data","all_spectra.csv"))
+# read_csv --> no factors, creates a tibble
+all_spectra <- read_csv(here::here("data","all_spectra.csv"))
 
 # quick look at the values in each column
 glimpse(all_spectra)
@@ -256,7 +257,7 @@ all_spectra %>%
 
 ### Standardize the bands: Interpolate wavelengths 
 
-Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range. 
+Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range.
 
 ```{r, warning=FALSE}
 # define the target wavelengths.
@@ -272,6 +273,7 @@ wavelength_vals <- seq(min_wl - 10, max_wl + 10,
 interp_wl <- all_spectra %>%
   split(.$spectraID) %>%
   pblapply(function(df) {
+
     interpolated_reflectance <- approx(x= df$wavelength_nm, 
                                        y = df$reflectance, 
                                        xout = wavelength_vals)
@@ -279,13 +281,6 @@ interp_wl <- all_spectra %>%
            band_idx = seq_along(wavelength_vals), 
            wavelength_nm = as.integer(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
-    
-    #VS-NOTE: debug
-    print(as.character(unique(df$spectraID))) 
-    #if(df$spectraID %in% c("NEON.PLA.D11.CLBJ.00485_2017")){
-    #  print(df$wavelength_nm)
-    #  print(df$reflectance)
-    #}
     
   }) %>%
   bind_rows %>% 
@@ -297,77 +292,7 @@ interp_wl <- all_spectra %>%
   dplyr::arrange(wavelength_nm) %>%
   dplyr::mutate(band_idx = paste0("band", 1:n())) %>%
   dplyr::arrange(spectraID)
-
-# should be 426 unique wavelength values
-length(unique(interp_wl$wavelength_nm))
 ```
-
-
-
-
-```{r}
-# VS-NOTE debug interpolation issue
-
-trouble_spectrum <- all_spectra %>% 
-    dplyr::filter(spectraID %in% c("NEON.PLA.D11.CLBJ.00485_2017")) 
-
-message("reflectance value summary:")
-summary(trouble_spectrum$reflectance)
-
-message("wavelength value summary")
-summary(trouble_spectrum$wavelength_nm)
-
-# plot spectrum
-trouble_spectrum %>% 
-    ggplot(aes(x = wavelength_nm, y = reflectance)) +
-    geom_line() + 
-    labs(title = "NEON.PLA.D11.CLBJ.00485_2017") + 
-    theme_bw()
-
-# attempt to interpolate manually
-wl_orig <- trouble_spectrum %>% 
-  dplyr::select(band_idx, wavelength_nm, reflectance)
-
-wl_interp <- approx(x = wl_orig$wavelength_nm,
-                    y = wl_orig$reflectance,
-                    xout = wavelength_vals,
-                    method = "linear")
-
-# This works, but the function below still gets stuck on this spectraID
-# https://stackoverflow.com/questions/44386686/interpolation-function-approx-in-r-gives-error-need-at-least-two-non-na-valu
-# ^ says the approx function needs two complete (x,y) pairs, can't have duplicated x values
-
-# What if I use my less efficient interpolation code from earlier - 
-
-
-# get a spectrum starting on 381, the target wavelengths
-wl_target <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D16.ABBY.01037") %>% 
-  dplyr::select(band_idx, wavelength_nm, reflectance)
-
-# get a spectrum starting on 384, with values to be interpolated
-wl_orig <- all_spectra %>% 
-  dplyr::filter(individualID == "NEON.PLA.D01.BART.02912") %>% 
-  dplyr::select(band_idx, wavelength_nm, reflectance)
-
-wl_interp <- approx(x = wl_orig$wavelength_nm,
-                    y = wl_orig$reflectance,
-                    xout = wl_target$wavelength_nm,
-                    method = "linear")
-
-wl_plot <- cbind(wl_orig, wl_target$wavelength_nm, wl_interp)
-
-# show table of interpolated values 
-kableExtra::kable(head(wl_plot, n = 10)) %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", 
-                            full_width = F, 
-                            position = "left")
-```
-
-
-
-
-
 
 Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. 
 Merge the interpolated wavelengths and reflectance values into a copy of the data frame. 
@@ -384,13 +309,14 @@ cleaned_spectra <- all_spectra %>%
 ```{r, fig.width=12}
 # plot interpolated spectra to see their starting wavelengths
 interp_wl %>% 
-  dplyr::filter(uid.x %in% c("0025a563-20b6-457c-9bc3-73f44c0c976c", 
-                             "0038ba14-553e-42bb-945f-395df5fdbdad",
-                             "050a6496-1037-461d-9289-82efa4feb17e")) %>% 
-  ggplot(aes(x = wavelength_nm, y = reflectance, group = uid.x)) +
-  geom_line(aes(color = uid.x), 
+  dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
+                                 "NEON.PLA.D11.CLBJ.00496_2018", 
+                                 "NEON.PLA.D01.HARV.09041_2018",
+                                 "NEON.PLA.D08.DELA.03903_2017")) %>% 
+  ggplot(aes(x = wavelength_nm, y = reflectance, group = spectraID)) +
+  geom_line(aes(color = spectraID), 
             alpha = 0.5, size = 1) +
-  labs(title = "Three spectra, interpolated wavelengths! Zoom in on beginning of spectra") + 
+  labs(title = "Spectra w interpolated wavelengths: Zoom in on beginning of spectra") + 
   # zoom in on beginning of spectra
   lims(x = c(380,400), y = c(0,0.1)) +
   theme_bw()
@@ -400,12 +326,12 @@ interp_wl %>%
 
 How many samples per species? Might want to filter out species with just a few samples. 
 
-```{r fig.height=12, fig.width = 10}
+```{r fig.height=15, fig.width = 10}
 thresh = 9
 
-# count number of samples (unique uid.x values) per species 
+# count number of samples (unique spectra) per species 
 taxonCounts <- cleaned_spectra %>% 
-    distinct(uid.x, .keep_all = TRUE) %>% 
+    distinct(spectraID, .keep_all = TRUE) %>% 
     group_by(taxonID) %>% 
     tally() %>% 
     # add a new column to indicate whether species count exceeds threshold
@@ -444,11 +370,11 @@ ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) +
 ```{r}
 # Filter out species with less than 3 samples 
 taxonCounts <- cleaned_spectra %>% 
-    distinct(uid.x, .keep_all = TRUE) %>% 
+    distinct(spectraID, .keep_all = TRUE) %>% 
     group_by(taxonID) %>% 
     tally() %>% 
   # remove taxonIDs with 2 samples or less
-  dplyr::filter(n>2)
+  dplyr::filter(n>thresh)
 
 filtered_spectra <- cleaned_spectra %>%
   dplyr::filter(taxonID %in% taxonCounts$taxonID)
@@ -457,16 +383,16 @@ filtered_spectra <- cleaned_spectra %>%
 
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
-```{r}
-# list of all unique uid.x values
-unique_uids <- unique(filtered_spectra$uid.x)
+```{r, include=FALSE}
+# list of all unique spectra
+unique_ids <- unique(filtered_spectra$spectraID)
 
 # Random sample indices
 set.seed(61)
 # train 0.6, test 0.2, eval 0.2
-train_index <- sample(1:length(unique_uids), 
-                      0.6 * length(unique_uids))
-test_eval_indices <- setdiff(1:length(unique_uids), train_index)
+train_index <- sample(1:length(unique_ids), 
+                      0.6 * length(unique_ids))
+test_eval_indices <- setdiff(1:length(unique_ids), train_index)
 
 # further split into into test, eval
 test_index <- sample(test_eval_indices, 
@@ -474,14 +400,14 @@ test_index <- sample(test_eval_indices,
 
 eval_index <- setdiff(test_eval_indices, test_index)
 
-# create a lookup table with columns for uid.x and set name
-set_lut <- data.frame(uid.x = unique_uids,
+# create a lookup table with columns for spectraID and set name
+set_lut <- data.frame(spectraID = unique_ids,
                       set = NA)
 set_lut[train_index, 2] <- "train"
 set_lut[test_index, 2] <- "test"
 set_lut[eval_index, 2] <- "eval"
 
-# see how many uid.x values are labeled as train, test, eval
+# see how many spectraID values are labeled as train, test, eval
 set_lut %>%
   group_by(set) %>% 
   tally() %>% 
@@ -489,7 +415,7 @@ set_lut %>%
 
 # apply lookup table to the spectral data frame, add a new column for set label
 filtered_spectra <- filtered_spectra %>%
-   left_join(set_lut, by = "uid.x") 
+   left_join(set_lut, by = "spectraID") 
 ```
 
 
@@ -497,7 +423,7 @@ filtered_spectra <- filtered_spectra %>%
 # efficiently split into train, test, valid groups 
 set.seed(711)
 splits <- filtered_spectra %>%
-	distinct(uid.x) %>%
+	distinct(spectraID) %>%
 	mutate(group = sample(c("train", "valid", "test"), n(), 
 	                      replace=TRUE, prob = c(.6, .2, .2)))
 
@@ -509,17 +435,38 @@ splits %>%
 
 # join these group labels into the spectra data frame 
 filtered_spectra <- filtered_spectra %>%
-	left_join(splits, by = "uid.x")
+	left_join(splits, by = "spectraID")
 ```
-
-
 
 ### Output "clean dataset" 
 
+Write spectra to csv file. 
 ```{r}
 write.csv(x = filtered_spectra,
-          file = here::here("data", "cleaned spectra.csv"),
+          file = here::here("data", "cleaned_spectra.csv"),
           row.names = FALSE)
 ```
 
-
+Visualize the spectra, facet by scientific name, color by taxon rank. 
+```{r, warning=FALSE, fig.height=16, fig.width=14}
+filtered_spectra %>%
+  ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = spectraID,
+             # color each facet plot based on taxonRank
+             color = taxonRank)) +
+  geom_path(alpha = .2) +
+  labs(x = '\n Wavelength (nm)',
+       y = 'Reflectance \n',
+       color = "Taxon Rank") + 
+  facet_wrap(~scientificName
+             # wrap long scientific names
+             ,labeller = label_wrap_gen(20)) + 
+  scale_color_manual(values = c("#e6550d","#1c9099", "#a8ddb5")) + 
+  theme_minimal() + 
+  # Adjust the text size and rotation angle 
+  theme(text = element_text(size=11),
+        axis.text.x = element_text(angle=90, hjust=1),
+        axis.title.y = element_text(size = 14),
+        axis.title.x = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14))
+```
