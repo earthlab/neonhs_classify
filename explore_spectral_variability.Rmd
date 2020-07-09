@@ -1,7 +1,7 @@
 ---
 title: "Explore spectral variability"
 author: "Victoria Scholl"
-date: "07/08/2020"
+date: "07/09/2020 Earth Lab GRA"
 output: html_document
 ---
 
