@@ -1,0 +1,68 @@
+---
+title: "Classify veg"
+author: "Victoria Scholl"
+date: "07/09/2020 Earth Lab GRA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(randomForest)
+```
+
+## Classify species
+
+```{r}
+# read the cleaned data, labeled for train, test, 
+cleaned_data <- read_csv(here::here("data","cleaned_spectra.csv"))
+
+# columns to keep for training the classifier
+cols_to_keep <- c("spectraID", "band_idx", "reflectance", "taxonID")
+
+# grab the training data 
+train_data <- cleaned_data %>% 
+  dplyr::filter(group == "train") %>% 
+  # use the mask to remove bad bands
+  dplyr::filter(mask == FALSE) %>%
+  # keep only the columns needed for classification
+  dplyr::select(all_of(cols_to_keep)) %>%
+  # reshape the data from long to wide so each row is a spectrum, 
+    # and each col contains reflectance per band.
+  # by default, the bands are out of order here... does this matter? 
+  tidyr::spread(band_idx, reflectance) %>% 
+  # remove spectraID since it's not a descriptive feature 
+  dplyr::select(-spectraID) 
+
+# convert taxonID to factor, so R does classification instead of regression
+train_data$taxonID <- as.factor(train_data$taxonID)
+
+  # need to filter out all spectra at the genus/variation level? 
+  # I wonder if i should make a new col with genus + species, since 
+  # taxonID can be more specific for variations? 
+
+# train random forest classifiers: predict taxonID
+rf_classifier = randomForest::randomForest(taxonID ~ ., 
+                                           data=train_data, 
+                                           #ntree=100, 
+                                           #mtry=12, 
+                                           importance=TRUE,
+                                           na.action = na.omit)
+
+# Got this error initially when trying to train: 
+#Error in na.fail.default(list(taxonID = 
+# c("BEAL2", "BEAL2", "ACRU", "TSCA", : missing values in object
+# sum(is.na(train_data)) = 6618, so there must be NA values in there somewhere.
+# there is an na.action parameter
+
+# Also got this error: 
+# Error in randomForest.default(m, y, ...) : 
+#  Need at least two classes to do classification.
+# But I see many factor classes: 
+train_data$taxonID
+
+```
+
