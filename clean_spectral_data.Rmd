@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "07/09/2020 Earth Lab GRA"
+date: "07/16/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -259,7 +259,7 @@ all_spectra %>%
 
 Interpolate wavelength values to have the same 426 bands starting at 384 nm, ending at 2512 nm, incrementing by 5 nm. To avoid data gaps on the ends, let's use a larger range.
 
-```{r, warning=FALSE}
+```{r wavelengths_interp}
 # define the target wavelengths.
 # use a larger range to get data on the ends.
 # with a 5nm spacing, add 10nm to each end, and 4 to the total number of wavelengths. 
@@ -268,7 +268,27 @@ max_wl <- 2512
 num_wl <- 426
 wavelength_vals <- seq(min_wl - 10, max_wl + 10,
                        length.out = num_wl + 4)
+```
 
+```{r}
+# get bad bands for the target wavelengths
+
+# identify a spectraID starting at the target wavelengths
+tmp_spectrum <- all_spectra %>% 
+    dplyr::filter(band_idx == "band1") %>% 
+    dplyr::filter(wavelength_nm == min_wl) %>% 
+    dplyr::select(spectraID) %>% 
+    dplyr::sample_n(1)
+
+# list the wavelengths that are bad bands, indicated by mask == TRUE
+bad_bands <- all_spectra %>% 
+  dplyr::filter(spectraID == tmp_spectrum$spectraID) %>%
+  dplyr::filter(mask==TRUE) %>%
+  dplyr::select(wavelength_nm, mask) 
+```
+
+
+```{r, warning=FALSE}
 # interpolate all spectra efficiently 
 interp_wl <- all_spectra %>%
   split(.$spectraID) %>%
@@ -279,6 +299,7 @@ interp_wl <- all_spectra %>%
                                        xout = wavelength_vals)
     tibble(spectraID = unique(df$spectraID), 
            band_idx = seq_along(wavelength_vals), 
+           # set wavelength values as integers
            wavelength_nm = as.integer(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
     
@@ -294,7 +315,13 @@ interp_wl <- all_spectra %>%
   dplyr::arrange(spectraID)
 ```
 
-Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. 
+
+```{r}
+# set reflectance values to NA for bad bands 
+interp_wl$reflectance[interp_wl$wavelength_nm %in% bad_bands$wavelength_nm] = NA
+```
+
+Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. Reflectance values are set to NA for the bad band wavelength values. 
 Merge the interpolated wavelengths and reflectance values into a copy of the data frame. 
 
 ```{r}
@@ -304,6 +331,8 @@ cleaned_spectra <- all_spectra %>%
   # merge in the interpolated wavelengths
   dplyr::left_join(interp_wl)
 ```
+
+
 
 
 ```{r, fig.width=12}

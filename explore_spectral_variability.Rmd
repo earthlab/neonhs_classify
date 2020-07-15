@@ -1,7 +1,7 @@
 ---
 title: "Explore spectral variability"
 author: "Victoria Scholl"
-date: "07/09/2020 Earth Lab GRA"
+date: "07/16/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -97,17 +97,18 @@ sd_data_to_plot%>%
   facet_wrap(~genusSpecies) + 
   geom_point(aes(color=sd), size =0.5) + 
   theme_minimal() + 
-  scale_color_gradient2(#low = 'yellow',
-                        mid = 'blue',  
-                        high = 'red',
-                        # set midpoint as the median of SD values
-                        midpoint = median(sd_data_to_plot$sd, na.rm=TRUE),
-                        # set the color limits as the min and max SD values
-                        limits = c(floor(min(sd_data_to_plot$sd, na.rm=TRUE)), 
-                                   ceiling(max(sd_data_to_plot$sd, na.rm=TRUE))),
-                        # set point color for NA values
-                        na.value = 'black',
-                        space = 'Lab')+
+  scale_color_viridis_c() + 
+  # scale_color_gradient2(#low = 'yellow',
+  #                      mid = 'blue',
+  #                      high = 'red',
+  #                      # set midpoint as the median of SD values
+  #                      midpoint = median(sd_data_to_plot$sd, na.rm=TRUE),
+  #                      # set the color limits as the min and max SD values
+  #                      limits = c(floor(min(sd_data_to_plot$sd, na.rm=TRUE)),
+  #                                 ceiling(max(sd_data_to_plot$sd, na.rm=TRUE))),
+  #                      # set point color for NA values
+  #                      na.value = 'black',
+  #                      space = 'Lab')+
   labs(x = '\n Wavelength (nm)',
        y = 'Standard Deviation \n',
        color = "SD",

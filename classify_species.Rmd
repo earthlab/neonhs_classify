@@ -1,7 +1,7 @@
 ---
 title: "Classify veg"
 author: "Victoria Scholl"
-date: "07/09/2020 Earth Lab GRA"
+date: "07/16/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -27,18 +27,21 @@ cols_to_keep <- c("spectraID", "band_idx", "reflectance", "taxonID")
 train_data <- cleaned_data %>% 
   dplyr::filter(group == "train") %>% 
   # use the mask to remove bad bands
-  dplyr::filter(mask == FALSE) %>%
+  #dplyr::filter(mask == FALSE) %>%
+  # remove all entries with NA reflectance values, indicative of bad bands
+  dplyr::filter(!is.na(reflectance)) %>% 
   # keep only the columns needed for classification
   dplyr::select(all_of(cols_to_keep)) %>%
   # reshape the data from long to wide so each row is a spectrum, 
     # and each col contains reflectance per band.
-  # by default, the bands are out of order here... does this matter? 
-  tidyr::spread(band_idx, reflectance) %>% 
+  tidyr::pivot_wider(names_from = band_idx, 
+                     values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
   dplyr::select(-spectraID) 
 
-# convert taxonID to factor, so R does classification instead of regression
-train_data$taxonID <- as.factor(train_data$taxonID)
+# convert taxonID to factor, so R does classification instead of regression.
+# reassign the factor levels after subsetting the training data
+train_data$taxonID <- factor(train_data$taxonID)
 
   # need to filter out all spectra at the genus/variation level? 
   # I wonder if i should make a new col with genus + species, since 
@@ -52,17 +55,9 @@ rf_classifier = randomForest::randomForest(taxonID ~ .,
                                            importance=TRUE,
                                            na.action = na.omit)
 
-# Got this error initially when trying to train: 
-#Error in na.fail.default(list(taxonID = 
-# c("BEAL2", "BEAL2", "ACRU", "TSCA", : missing values in object
-# sum(is.na(train_data)) = 6618, so there must be NA values in there somewhere.
-# there is an na.action parameter
-
-# Also got this error: 
-# Error in randomForest.default(m, y, ...) : 
-#  Need at least two classes to do classification.
-# But I see many factor classes: 
-train_data$taxonID
-
+# Got this error when trying to train: 
+# Error in randomForest.default(m, y, ...) : Can't have empty classes in y.
+# But all taxonID values appear to have at least one value
+table(train_data$taxonID)
 ```
 
