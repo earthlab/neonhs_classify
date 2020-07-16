@@ -39,7 +39,9 @@ train_data <- cleaned_data %>%
   tidyr::pivot_wider(names_from = band_idx, 
                      values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
-  dplyr::select(-spectraID) 
+  dplyr::select(-spectraID) %>% 
+  # VS-NOTE: subset of small sample for testing!!!
+  dplyr::sample_frac(0.1)
 
 # convert taxonID to factor, so R does classification instead of regression.
 # reassign the factor levels after subsetting the training data
@@ -58,21 +60,23 @@ rf_classifier = randomForest::randomForest(taxonID ~ .,
                                            #ntree=100, 
                                            #mtry=12, 
                                            importance=TRUE,
-                                           na.action = na.omit)
+                                           do.trace=TRUE)
 
-# Got this error when trying to train: 
-# Error in randomForest.default(m, y, ...) : Can't have empty classes in y.
-# But all taxonID values appear to have at least one value
-table(train_data$taxonID)
+test_data <- cleaned_data %>% 
+  dplyr::filter(group == "test") %>% 
+  dplyr::sample_frac(0.2)
 
-# no NAs in the taxonID column
-sum(is.na(train_data$taxonID))
+
+predict(object = rf_classifier,
+        newdata = train_data)
+
 ```
 
 ```{r caret}
 rf_fit <- caret::train(as.factor(taxonID) ~ ., 
                 data = train_data, 
                 method = "ranger") # specify "ranger" method to implement RF 
-# Error in na.fail.default(list(`as.factor(taxonID)` = c(51L, 51L, 51L, : missing values in object
+
+
 ```
 

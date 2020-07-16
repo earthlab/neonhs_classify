@@ -300,7 +300,7 @@ interp_wl <- all_spectra %>%
     tibble(spectraID = unique(df$spectraID), 
            band_idx = seq_along(wavelength_vals), 
            # set wavelength values as integers
-           wavelength_nm = as.integer(interpolated_reflectance$x), 
+           wavelength_nm = round(interpolated_reflectance$x), 
            reflectance = interpolated_reflectance$y)
     
   }) %>%
@@ -412,7 +412,7 @@ filtered_spectra <- cleaned_spectra %>%
 
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
-```{r, include=FALSE}
+```{r, include=FALSE, eval=FALSE}
 # list of all unique spectra
 unique_ids <- unique(filtered_spectra$spectraID)
 
