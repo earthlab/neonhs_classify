@@ -318,7 +318,7 @@ interp_wl <- all_spectra %>%
 
 ```{r}
 # set reflectance values to NA for bad bands 
-interp_wl$reflectance[interp_wl$wavelength_nm %in% bad_bands$wavelength_nm] = NA
+interp_wl$reflectance[interp_wl$wavelength_nm %in% bad_bands$wavelength_nm] <- NA
 ```
 
 Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. Reflectance values are set to NA for the bad band wavelength values. 
