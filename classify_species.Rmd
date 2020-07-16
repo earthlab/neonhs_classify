@@ -12,6 +12,8 @@ library(tidyverse)
 library(tidyr)
 library(dplyr)
 library(randomForest)
+library(caret)
+library(ranger)
 ```
 
 ## Classify species
@@ -47,6 +49,9 @@ train_data$taxonID <- factor(train_data$taxonID)
   # I wonder if i should make a new col with genus + species, since 
   # taxonID can be more specific for variations? 
 
+```
+
+```{r randomForest}
 # train random forest classifiers: predict taxonID
 rf_classifier = randomForest::randomForest(taxonID ~ ., 
                                            data=train_data, 
@@ -59,5 +64,15 @@ rf_classifier = randomForest::randomForest(taxonID ~ .,
 # Error in randomForest.default(m, y, ...) : Can't have empty classes in y.
 # But all taxonID values appear to have at least one value
 table(train_data$taxonID)
+
+# no NAs in the taxonID column
+sum(is.na(train_data$taxonID))
+```
+
+```{r caret}
+rf_fit <- caret::train(as.factor(taxonID) ~ ., 
+                data = train_data, 
+                method = "ranger") # specify "ranger" method to implement RF 
+# Error in na.fail.default(list(`as.factor(taxonID)` = c(51L, 51L, 51L, : missing values in object
 ```
 
