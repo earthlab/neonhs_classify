@@ -1,7 +1,7 @@
 ---
 title: "Classify veg"
 author: "Victoria Scholl"
-date: "07/16/2020 Earth Lab GRA"
+date: "07/23/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -18,18 +18,18 @@ library(ranger)
 
 ## Classify species
 
-```{r}
+```{r read_data}
 # read the cleaned data, labeled for train, test, 
 cleaned_data <- read_csv(here::here("data","cleaned_spectra.csv"))
+```
 
+```{r format_data}
 # columns to keep for training the classifier
-cols_to_keep <- c("spectraID", "band_idx", "reflectance", "taxonID")
+cols_to_keep <- c("spectraID", "band_idx", "reflectance", "genusSpecies")
 
-# grab the training data 
+# select and format the training data 
 train_data <- cleaned_data %>% 
   dplyr::filter(group == "train") %>% 
-  # use the mask to remove bad bands
-  #dplyr::filter(mask == FALSE) %>%
   # remove all entries with NA reflectance values, indicative of bad bands
   dplyr::filter(!is.na(reflectance)) %>% 
   # keep only the columns needed for classification
@@ -39,43 +39,77 @@ train_data <- cleaned_data %>%
   tidyr::pivot_wider(names_from = band_idx, 
                      values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
-  dplyr::select(-spectraID) %>% 
-  # VS-NOTE: subset of small sample for testing!!!
-  dplyr::sample_frac(0.1)
+  dplyr::select(-spectraID) 
 
-# convert taxonID to factor, so R does classification instead of regression.
+#%>% 
+  # VS-NOTE: subset of small sample for testing!!!
+  #dplyr::sample_frac(0.5)
+
+# convert genusSpecies to factor, so R does classification instead of regression.
 # reassign the factor levels after subsetting the training data
-train_data$taxonID <- factor(train_data$taxonID)
+train_data$genusSpecies <- factor(train_data$genusSpecies)
 
   # need to filter out all spectra at the genus/variation level? 
   # I wonder if i should make a new col with genus + species, since 
-  # taxonID can be more specific for variations? 
+  # genusSpecies can be more specific for variations? 
 
-```
 
-```{r randomForest}
-# train random forest classifiers: predict taxonID
-rf_classifier = randomForest::randomForest(taxonID ~ ., 
-                                           data=train_data, 
-                                           #ntree=100, 
-                                           #mtry=12, 
-                                           importance=TRUE,
-                                           do.trace=TRUE)
-
+# select and format the test data 
 test_data <- cleaned_data %>% 
   dplyr::filter(group == "test") %>% 
-  dplyr::sample_frac(0.2)
+  # remove all entries with NA reflectance values, indicative of bad bands
+  dplyr::filter(!is.na(reflectance)) %>% 
+  # keep only the columns needed for classification
+  dplyr::select(all_of(cols_to_keep)) %>%
+  # reshape the data from long to wide so each row is a spectrum, 
+    # and each col contains reflectance per band.
+  tidyr::pivot_wider(names_from = band_idx, 
+                     values_from = reflectance) %>% 
+  # remove spectraID since it's not a descriptive feature 
+  dplyr::select(-spectraID) 
 
+#%>% 
+  # VS-NOTE: subset of small sample for testing!!!
+  #dplyr::sample_frac(0.2)
 
-predict(object = rf_classifier,
-        newdata = train_data)
+test_data$genusSpecies <- factor(test_data$genusSpecies)
 
 ```
 
+```{r randomForest_train}
+set.seed(44)
+
+# train random forest classifiers: predict genusSpecies
+rf_classifier <- randomForest::randomForest(factor(genusSpecies) ~ ., 
+                                           data=train_data, 
+                                           importance=TRUE,
+                                           #do.trace=TRUE
+                                           )
+
+print(rf_classifier)
+```
+
+```{r randomForest_test}
+p <- predict(rf_classifier, test_data, type = "class")
+
+# variable importance plot 
+randomForest::varImpPlot(rf_classifier)
+
+# confusion matrix
+confusionMatrix(p, test_data$genusSpecies)
+```
+
+
 ```{r caret}
-rf_fit <- caret::train(as.factor(taxonID) ~ ., 
+set.seed(1234)
+
+rf_default <- caret::train(factor(genusSpecies) ~ ., 
                 data = train_data, 
-                method = "ranger") # specify "ranger" method to implement RF 
+                method = "ranger",
+                metric = "Accuracy")
+
+# Print the results
+print(rf_default)
 
 
 ```

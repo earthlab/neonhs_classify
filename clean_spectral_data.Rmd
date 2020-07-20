@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "07/16/2020 Earth Lab GRA"
+date: "07/23/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -96,13 +96,26 @@ all_spectra <- all_spectra %>%
 # create new columns for genus and species (disregard variations within species) 
 all_spectra <- all_spectra %>% 
   tidyr::separate(scientificName, into = c('genus', 'species'), sep = ' ', 
-           extra = 'drop', remove = FALSE)
+           extra = 'drop', remove = FALSE) %>% 
+  # add a column combining genus and species for classification
+  dplyr::mutate(genusSpecies = paste(genus,species))
 
 message("# of unique genus values:")
 length(unique(all_spectra$genus))
 
 message("# of unique species values:")
 length(unique(all_spectra$species))
+
+message("# of unique genusSpecies values")
+length(unique(all_spectra$genusSpecies))
+```
+
+```{r}
+# example where there are multiple variations of a single genusSpecies value
+all_spectra %>% 
+  filter(genus == "Pseudotsuga") %>% 
+  select(taxonID, genusSpecies, scientificName) %>% 
+  distinct()
 ```
 
 
@@ -121,8 +134,8 @@ all_spectra %>%
   labs(x = '\n Wavelength (nm)',
        y = 'Reflectance \n',
        color = "Taxon Rank") + 
-  facet_wrap(~scientificName
-             # wrap long scientific names
+  facet_wrap(~genusSpecies
+             # wrap long names
              ,labeller = label_wrap_gen(20)) + 
   scale_color_manual(values = c("#e6550d","#1c9099", "#a8ddb5")) + 
   theme_minimal() + 
@@ -153,7 +166,8 @@ kableExtra::kable(count_min_wavelengths) %>%
                             position = "left")
 ```
 
-Filter spectra with starting wavelengths <380nm for now, since they complicate the wavelength interpolation
+Filter spectra with starting wavelengths <380nm for now, since they complicate the wavelength interpolation.
+All spectra with a starting wavelength of 347nm come from the [PUUM](https://www.neonscience.org/field-sites/field-sites-map/PUUM) site in Hawaii - why? TBD. 
 
 ```{r}
 # identify spectraID values that start at 347nm
@@ -197,14 +211,14 @@ for(wl in unique(count_min_wavelengths$wavelength_nm)){
   
 }
 
-# here are spectraID values for each of the starting wavelengths
+# here are random spectraID values for each of the starting wavelengths
 # 347 --> "NEON.PLA.D20.PUUM.00954_2019"
 # 381 --> "NEON.PLA.D11.CLBJ.00496_2018"
 # 382 --> "NEON.PLA.D01.HARV.09041_2018"
 # 384 --> "NEON.PLA.D08.DELA.03903_2017"
 ```
 
-```{r warning=FALSE, fig.width=12}
+```{r warning=FALSE, fig.width=12, include=FALSE, eval=FALSE}
 # plot all spectra to see their starting/ending wavelengths
 all_spectra %>% 
   dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
@@ -232,7 +246,7 @@ all_spectra %>%
             alpha = 0.5, size = 1) +
   labs(title = "Spectra with different wavelengths: zoom in on beginning of spectra") + 
   # zoom in on beginning of spectra
-  lims(x = c(347,400), y = c(0,0.3)) +
+  lims(x = c(380,400), y = c(0,0.1)) +
   theme_bw()
 ```
 
@@ -355,13 +369,14 @@ interp_wl %>%
 
 How many samples per species? Might want to filter out species with just a few samples. 
 
-```{r fig.height=15, fig.width = 10}
-thresh = 9
+```{r filter_species_N_samples, fig.height=15, fig.width = 10}
+thresh = 19
 
 # count number of samples (unique spectra) per species 
 taxonCounts <- cleaned_spectra %>% 
     distinct(spectraID, .keep_all = TRUE) %>% 
-    group_by(taxonID) %>% 
+    #group_by(taxonID) %>% 
+    group_by(genusSpecies) %>% 
     tally() %>% 
     # add a new column to indicate whether species count exceeds threshold
     mutate(countGT = case_when(
@@ -370,7 +385,7 @@ taxonCounts <- cleaned_spectra %>%
     ))
 
 
-# count total number of uid samples across all species
+# count total number of samples across all species
 samplesCountTotal <- taxonCounts %>% 
   summarise(sum(n))
 
@@ -384,73 +399,39 @@ speciesCountGT <- nrow(taxonCounts %>%
   filter(countGT == TRUE))
 
 
-
-ggplot(taxonCounts, aes(y = reorder(taxonID, n), x = n)) + 
+# plot histogram with count per genusSpecies. color bars based on whether
+# # samples exceeds the threshold
+ggplot(taxonCounts, aes(y = reorder(genusSpecies, n), x = n)) + 
+                          #reorder(taxonID, n), x = n)) + 
   geom_bar(stat = "identity", aes(fill = countGT)) + 
   labs(title = paste("Histogram of samples per species.",
                      speciesCountTotal, "total species;",
                      speciesCountGT, "species with greater than",
                      thresh, "samples"),
+       y = "Genus Species",
        fill = paste("count greater than threshold", thresh)) + 
   theme_bw() + 
   scale_fill_manual(values = c("#d95f0e", "#7bccc4"))
 ```
 
 ```{r}
-# Filter out species with less than 3 samples 
+# Filter out species with less than N samples 
 taxonCounts <- cleaned_spectra %>% 
     distinct(spectraID, .keep_all = TRUE) %>% 
-    group_by(taxonID) %>% 
+    group_by(genusSpecies) %>% 
     tally() %>% 
-  # remove taxonIDs with 2 samples or less
   dplyr::filter(n>thresh)
 
 filtered_spectra <- cleaned_spectra %>%
-  dplyr::filter(taxonID %in% taxonCounts$taxonID)
+  dplyr::filter(genusSpecies %in% taxonCounts$genusSpecies)
 ```
 
 
 Split multiple observations of individuals across sets. Add a column to the data (“train”, “eval”, “test”). The 80/20 ratio (based on the [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)) for training/testing is common, where the 20% can be split into 10/10 for testing/validation. Andrew NG recommends 60/20/20 for training/testing/validation in his online machine learning course.   
 
-```{r, include=FALSE, eval=FALSE}
-# list of all unique spectra
-unique_ids <- unique(filtered_spectra$spectraID)
-
-# Random sample indices
-set.seed(61)
-# train 0.6, test 0.2, eval 0.2
-train_index <- sample(1:length(unique_ids), 
-                      0.6 * length(unique_ids))
-test_eval_indices <- setdiff(1:length(unique_ids), train_index)
-
-# further split into into test, eval
-test_index <- sample(test_eval_indices, 
-                      0.5 * length(test_eval_indices))
-
-eval_index <- setdiff(test_eval_indices, test_index)
-
-# create a lookup table with columns for spectraID and set name
-set_lut <- data.frame(spectraID = unique_ids,
-                      set = NA)
-set_lut[train_index, 2] <- "train"
-set_lut[test_index, 2] <- "test"
-set_lut[eval_index, 2] <- "eval"
-
-# see how many spectraID values are labeled as train, test, eval
-set_lut %>%
-  group_by(set) %>% 
-  tally() %>% 
-  mutate(percent = n / sum(n))
-
-# apply lookup table to the spectral data frame, add a new column for set label
-filtered_spectra <- filtered_spectra %>%
-   left_join(set_lut, by = "spectraID") 
-```
-
-
 ```{r split_train_test_valid}
+set.seed(44)
 # efficiently split into train, test, valid groups 
-set.seed(711)
 splits <- filtered_spectra %>%
 	distinct(spectraID) %>%
 	mutate(group = sample(c("train", "valid", "test"), n(), 
@@ -467,20 +448,38 @@ filtered_spectra <- filtered_spectra %>%
 	left_join(splits, by = "spectraID")
 ```
 
+```{r}
+# are all genusSpecies values present in each group?
+filtered_spectra %>% 
+  filter(group == "train") %>%
+  select(genusSpecies) %>%
+  unique() %>% 
+  nrow()
+
+filtered_spectra %>% 
+  filter(group == "test") %>%
+  select(genusSpecies) %>%
+  unique() %>% 
+  nrow()
+
+filtered_spectra %>% 
+  filter(group == "valid") %>%
+  select(genusSpecies) %>%
+  unique() %>% 
+  nrow()
+```
+
+
 ### Output "clean dataset" 
 
 Write spectra to csv file. 
 ```{r}
-#write.csv(x = filtered_spectra,
-#          file = here::here("data", "cleaned_spectra.csv"),
-#          row.names = FALSE)
-
 write_csv(x = filtered_spectra,
           path = here::here("data", "cleaned_spectra.csv"))
 ```
 
 Visualize the spectra, facet by scientific name, color by taxon rank. 
-```{r, warning=FALSE, fig.height=16, fig.width=14}
+```{r, warning=FALSE, fig.height=12, fig.width=16}
 filtered_spectra %>%
   ggplot(aes(wavelength_nm, ifelse(mask, NA, reflectance), group = spectraID,
              # color each facet plot based on taxonRank
@@ -489,9 +488,10 @@ filtered_spectra %>%
   labs(x = '\n Wavelength (nm)',
        y = 'Reflectance \n',
        color = "Taxon Rank") + 
-  facet_wrap(~scientificName
+  facet_wrap(~genusSpecies
              # wrap long scientific names
-             ,labeller = label_wrap_gen(20)) + 
+             ,labeller = label_wrap_gen(20)
+             ,ncol=10) + 
   scale_color_manual(values = c("#e6550d","#1c9099", "#a8ddb5")) + 
   theme_minimal() + 
   # Adjust the text size and rotation angle 
