@@ -62,7 +62,7 @@ valid_data <- cleaned_data %>%
   # remove all entries with NA reflectance values, indicative of bad bands
   dplyr::filter(!is.na(reflectance)) %>% 
   # filter spectra identified at the genus level, indicated by species == "sp."
-  dplyr::filter(species != "sp.") %>%s
+  dplyr::filter(species != "sp.") %>%
   # keep only the columns needed for classification
   dplyr::select(all_of(cols_to_keep)) %>%
   # reshape the data from long to wide so each row is a spectrum, 
