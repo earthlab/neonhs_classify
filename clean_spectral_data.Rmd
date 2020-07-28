@@ -1,7 +1,7 @@
 ---
 title: "Clean spectral data"
 author: "Victoria Scholl"
-date: "07/23/2020 Earth Lab GRA"
+date: "07/30/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -210,16 +210,10 @@ for(wl in unique(count_min_wavelengths$wavelength_nm)){
   message(paste("spectraID starting at", wl, "nm: ", as.character(tmp$spectraID)))
   
 }
-
-# here are random spectraID values for each of the starting wavelengths
-# 347 --> "NEON.PLA.D20.PUUM.00954_2019"
-# 381 --> "NEON.PLA.D11.CLBJ.00496_2018"
-# 382 --> "NEON.PLA.D01.HARV.09041_2018"
-# 384 --> "NEON.PLA.D08.DELA.03903_2017"
 ```
 
 ```{r warning=FALSE, fig.width=12, include=FALSE, eval=FALSE}
-# plot all spectra to see their starting/ending wavelengths
+# plot spectra to see their starting/ending wavelengths
 all_spectra %>% 
   dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
@@ -235,7 +229,7 @@ all_spectra %>%
 Beginning of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all spectra to see their starting wavelengths
+# plot spectra to see their starting wavelengths
 all_spectra %>% 
   dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
@@ -253,7 +247,7 @@ all_spectra %>%
 End of wavelength range: 
 
 ```{r warning=FALSE, fig.width=12}
-# plot all spectra to see their ending wavelengths
+# plot spectra to see their ending wavelengths
 all_spectra %>% 
   dplyr::filter(spectraID %in% c(#"NEON.PLA.D20.PUUM.00954_2019",
                                  "NEON.PLA.D11.CLBJ.00496_2018", 
@@ -338,7 +332,7 @@ interp_wl$reflectance[interp_wl$wavelength_nm %in% bad_bands$wavelength_nm] <- N
 Now, each spectrum (designated by a unique spectraID value) has the same 426 wavelength values. Reflectance values are set to NA for the bad band wavelength values. 
 Merge the interpolated wavelengths and reflectance values into a copy of the data frame. 
 
-```{r}
+```{r, message=FALSE}
 # make a copy of the original spectra 
 cleaned_spectra <- all_spectra %>% 
   dplyr::select(-c(wavelength_nm, reflectance)) %>% 
@@ -367,9 +361,10 @@ interp_wl %>%
 
 ### Partition data into train, evaluation, & test sets
 
-How many samples per species? Might want to filter out species with just a few samples. 
+How many samples per species? Filter out species with just a few samples. 
 
 ```{r filter_species_N_samples, fig.height=15, fig.width = 10}
+# threshold to keep species with at more than this # of samples
 thresh = 19
 
 # count number of samples (unique spectra) per species 
