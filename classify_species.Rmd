@@ -1,7 +1,7 @@
 ---
 title: "Classify veg"
 author: "Victoria Scholl"
-date: "07/23/2020 Earth Lab GRA"
+date: "07/30/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -13,7 +13,6 @@ library(tidyr)
 library(dplyr)
 library(randomForest)
 library(caret)
-library(ranger)
 ```
 
 ## Classify species
@@ -23,15 +22,22 @@ library(ranger)
 cleaned_data <- read_csv(here::here("data","cleaned_spectra.csv"))
 ```
 
+Format the data so each row is a sample (reflectance spectrum) and each column is a descriptive feature (reflectance value at each wavelength). Each row must have a label to predict for the classification, such as genusSpecies (the first two pieces of each scientific name excluding any variety info. Example: Pseudotsuga menziesii. Genus is Pseudotsuga, species is menziesii).
+
 ```{r format_data}
 # columns to keep for training the classifier
 cols_to_keep <- c("spectraID", "band_idx", "reflectance", "genusSpecies")
 
+# training set -------------------------------------------------
 # select and format the training data 
 train_data <- cleaned_data %>% 
-  dplyr::filter(group == "train") %>% 
+  # keep only the spectra marked as part of the "train" or "test" set
+    # train 60% + test 20% = 80% for training with k-fold cross validation
+  dplyr::filter(group == "train" | group == "test") %>% 
   # remove all entries with NA reflectance values, indicative of bad bands
   dplyr::filter(!is.na(reflectance)) %>% 
+  # filter spectra identified at the genus level, indicated by species == "sp."
+  dplyr::filter(species != "sp.") %>% 
   # keep only the columns needed for classification
   dplyr::select(all_of(cols_to_keep)) %>%
   # reshape the data from long to wide so each row is a spectrum, 
@@ -39,26 +45,24 @@ train_data <- cleaned_data %>%
   tidyr::pivot_wider(names_from = band_idx, 
                      values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
-  dplyr::select(-spectraID) 
-
-#%>% 
-  # VS-NOTE: subset of small sample for testing!!!
-  #dplyr::sample_frac(0.5)
+  dplyr::select(-spectraID) %>% 
+  # VS-NOTE: subset small # of samples for testing!!!
+  dplyr::sample_frac(0.5)
 
 # convert genusSpecies to factor, so R does classification instead of regression.
 # reassign the factor levels after subsetting the training data
 train_data$genusSpecies <- factor(train_data$genusSpecies)
 
-  # need to filter out all spectra at the genus/variation level? 
-  # I wonder if i should make a new col with genus + species, since 
-  # genusSpecies can be more specific for variations? 
 
 
-# select and format the test data 
-test_data <- cleaned_data %>% 
-  dplyr::filter(group == "test") %>% 
+# validation set -----------------------------------------------
+valid_data <- cleaned_data %>% 
+  #  keep only the spectra marked as part of the independent validation set
+  dplyr::filter(group == "valid") %>% 
   # remove all entries with NA reflectance values, indicative of bad bands
   dplyr::filter(!is.na(reflectance)) %>% 
+  # filter spectra identified at the genus level, indicated by species == "sp."
+  dplyr::filter(species != "sp.") %>%s
   # keep only the columns needed for classification
   dplyr::select(all_of(cols_to_keep)) %>%
   # reshape the data from long to wide so each row is a spectrum, 
@@ -68,12 +72,7 @@ test_data <- cleaned_data %>%
   # remove spectraID since it's not a descriptive feature 
   dplyr::select(-spectraID) 
 
-#%>% 
-  # VS-NOTE: subset of small sample for testing!!!
-  #dplyr::sample_frac(0.2)
-
-test_data$genusSpecies <- factor(test_data$genusSpecies)
-
+valid_data$genusSpecies <- factor(valid_data$genusSpecies)
 ```
 
 ```{r randomForest_train}
@@ -89,11 +88,11 @@ rf_classifier <- randomForest::randomForest(factor(genusSpecies) ~ .,
 print(rf_classifier)
 ```
 
-```{r randomForest_test}
-p <- predict(rf_classifier, test_data, type = "class")
-
+```{r randomForest_test, eval=FALSE}
 # variable importance plot 
 randomForest::varImpPlot(rf_classifier)
+
+p <- predict(rf_classifier, test_data, type = "class")
 
 # confusion matrix
 confusionMatrix(p, test_data$genusSpecies)
@@ -101,15 +100,86 @@ confusionMatrix(p, test_data$genusSpecies)
 
 
 ```{r caret}
-set.seed(1234)
+# caret = Classification And REgression Training 
 
-rf_default <- caret::train(factor(genusSpecies) ~ ., 
+# tuning parameters to try: ntree, mtry
+tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
+
+#10 folds repeat 3 times --> alternative to the train/test/valid, dont need both
+control <- trainControl(method='repeatedcv', 
+                        number=10, 
+                        repeats=3,
+                        search = "grid")
+
+start_time = Sys.time()
+
+rf_gridsearch <- caret::train(factor(genusSpecies) ~ ., 
                 data = train_data, 
-                method = "ranger",
-                metric = "Accuracy")
+                method = "rf",
+                metric = "Accuracy",
+                tuneGrid=tunegrid, 
+                trControl=control,
+                verbose = TRUE)
+
+end_time = Sys.time()
+
+end_time - start_time
 
 # Print the results
-print(rf_default)
+print(rf_gridsearch)
+plot(rf_gridsearch)
+```
+
+```{r}
+# https://rpubs.com/phamdinhkhanh/389752
+
+set.seed(44)
+# iteratively check ntree values 
+for (ntree in c(100,500,1000)){
+  print(ntree)
+  fit <- train(caret::train(factor(genusSpecies) ~ ., 
+                data = train_data, 
+                method = "rf",
+                metric = "Accuracy",
+                ntree = ntree,
+                tuneGrid=expand.grid(mtry = 21), 
+                trControl=control,
+                verbose = TRUE))
+  key <- toString(ntree)
+  modellist[[key]] <- fit
+}
+
+#Compare results
+results <- resamples(modellist)
+summary(results)
+
+dotplot(results)
+```
+```{r}
+tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
+
+tuneGrid <- expand.grid(mtry = 21)
+
+rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ ., 
+                data = train_data, 
+                method = "rf",
+                metric = "Accuracy",
+                ntree = 100,
+                tuneGrid=tunegrid,
+                verbose = TRUE)
+```
+
+```{r}
+# caret ranger? 
+# https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument 
+# parallel
+# k-fold cross val (merge train+valid, keep separate test set) OR train/test/valid split
+# test ntree AND mtry values 
+# conf matrix + var imp plot formatted
+```
+
+```{r}
+#https://afit-r.github.io/random_forests#tune
 
 
 ```
