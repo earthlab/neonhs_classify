@@ -1,7 +1,7 @@
 ---
 title: "Classify veg"
 author: "Victoria Scholl"
-date: "07/30/2020 Earth Lab GRA"
+date: "08/06/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -13,6 +13,7 @@ library(tidyr)
 library(dplyr)
 library(randomForest)
 library(caret)
+library(rfPermute)
 ```
 
 ## Classify species
@@ -81,12 +82,21 @@ set.seed(44)
 # train random forest classifiers: predict genusSpecies
 rf_classifier <- randomForest::randomForest(factor(genusSpecies) ~ ., 
                                            data=train_data, 
-                                           importance=TRUE,
-                                           #do.trace=TRUE
+                                           importance=TRUE
+                                           #,do.trace=TRUE
                                            )
 
 print(rf_classifier)
 ```
+
+```{r formatted_conf_matrix, fig.height=12, fig.width=12}
+# nicely formatted confusion matrix using the rfPermute library
+confMatrix <- rfPermute::plotConfMat(rf = rf_classifier, 
+                                     title = "randomForest confusion matrix: training set") 
+
+confMatrix
+```
+
 
 ```{r randomForest_test, eval=FALSE}
 # variable importance plot 
@@ -95,7 +105,19 @@ randomForest::varImpPlot(rf_classifier)
 p <- predict(rf_classifier, test_data, type = "class")
 
 # confusion matrix
-confusionMatrix(p, test_data$genusSpecies)
+rf_test_results <- data.frame(obs = test_data$genusSpecies,
+                              pred = as.vector(p))
+levels(rf_test_results$pred) <- levels(rf_test_results$obs)
+
+# Use the yardstick library to calculate confusion matrix
+# https://yardstick.tidymodels.org/reference/conf_mat.html
+cm <- rf_test_results %>% 
+  yardstick::conf_mat(obs, pred)
+
+
+ggplot2::autoplot(cm, type = "heatmap") + 
+  scale_fill_brewer()
+
 ```
 
 
