@@ -89,6 +89,8 @@ rf_classifier <- randomForest::randomForest(factor(genusSpecies) ~ .,
 print(rf_classifier)
 ```
 
+### Confusion matrices
+
 ```{r formatted_conf_matrix, fig.height=12, fig.width=12}
 # nicely formatted confusion matrix using the rfPermute library
 confMatrix <- rfPermute::plotConfMat(rf = rf_classifier, 
@@ -98,7 +100,7 @@ confMatrix
 ```
 
 
-```{r randomForest_test, eval=FALSE}
+```{r randomForest_test, fig.width=12, fig.height=12}
 # variable importance plot 
 randomForest::varImpPlot(rf_classifier)
 
@@ -114,10 +116,46 @@ levels(rf_test_results$pred) <- levels(rf_test_results$obs)
 cm <- rf_test_results %>% 
   yardstick::conf_mat(obs, pred)
 
+# plot confusion matrix
+autoplot(cm, type = "heatmap") + 
+  scale_fill_gradient(low="#FFFFFF",high = "#2E86C1") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot2::autoplot(cm, type = "heatmap") + 
-  scale_fill_brewer()
+# VS-NOTE how to adjust the color scale to show greater contrast with low values? 
+```
 
+### Variable importance 
+
+```{r randomForest_varImpPlot_default, fig.height=10}
+# default varImpPlot visualization in randomForest
+varImpPlot(rf_classifier)
+```
+```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=10}
+
+# format the randomForest variable importance for ggplot
+imp <- as.data.frame(varImpPlot(rf_classifier))
+imp$varnames <- rownames(imp) # row names to column
+rownames(imp) <- NULL  
+
+# keep the n features with the highest MeanDecreaseAccuracy values 
+imp_top30_mda <- arrange(imp, desc(MeanDecreaseAccuracy)) %>% 
+  select(c(MeanDecreaseAccuracy, varnames)) %>% 
+  slice_head(n = 40)
+
+
+ggplot(imp_top30_mda, aes(x=reorder(varnames, MeanDecreaseAccuracy), 
+                y=MeanDecreaseAccuracy
+                ,color=MeanDecreaseAccuracy
+                )) + 
+  geom_point() +
+  geom_segment(aes(x=varnames,xend=varnames,y=0,yend=MeanDecreaseAccuracy)) +
+  scale_color_continuous(type = "viridis") +
+  ylab("MDA") +
+  xlab("Variable Name") +
+  ggtitle("RandomForest variable importance: Mean Decrease Accuracy (MDA)") +
+  labs(color = "MDA") + 
+  coord_flip() + 
+  theme_minimal()
 ```
 
 
