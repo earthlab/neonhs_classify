@@ -100,28 +100,46 @@ confMatrix
 ```
 
 
-```{r randomForest_test, fig.width=12, fig.height=12}
-# variable importance plot 
-randomForest::varImpPlot(rf_classifier)
+```{r randomForest_valid, fig.width=12, fig.height=12}
 
-p <- predict(rf_classifier, test_data, type = "class")
+# predict species for validation set
+p <- predict(rf_classifier, valid_data, type = "class")
 
-# confusion matrix
-rf_test_results <- data.frame(obs = test_data$genusSpecies,
-                              pred = as.vector(p))
-levels(rf_test_results$pred) <- levels(rf_test_results$obs)
+# combine observed and predicted values into a single data frame
+rf_valid_results <- tibble(obs = as.character(valid_data$genusSpecies),
+                              pred = as.character(as.vector(p)))
 
-# Use the yardstick library to calculate confusion matrix
-# https://yardstick.tidymodels.org/reference/conf_mat.html
-cm <- rf_test_results %>% 
-  yardstick::conf_mat(obs, pred)
+all_combos <- expand.grid(obs = unique(rf_valid_results$obs), 
+				    pred = unique(rf_valid_results$obs))
 
-# plot confusion matrix
-autoplot(cm, type = "heatmap") + 
-  scale_fill_gradient(low="#FFFFFF",high = "#2E86C1") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# format the observed and predicted values into a conf matrix
 
-# VS-NOTE how to adjust the color scale to show greater contrast with low values? 
+rf_valid_results %>% 
+  # count number of each obs/pred combination
+  count(obs,pred) %>% 
+  # fill in combinations with counts of zero
+  complete(obs, pred, fill = list(n = 0)) %>% 
+  # add rows witth species combinations not in predicted set
+  right_join(all_combos) %>% 
+  # set NA values to 0 in the n column
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  # set raster cell fill color based on count
+  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
+  geom_raster() + 
+  # add boxes around diagonal cells
+  geom_tile(aes(color = obs == pred), size = 0.5) + 
+  scale_color_manual(values = c(NA, "black")) + 
+  # rotate x axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Truth", y = "Predicted") + 
+  scale_fill_gradient(low = "white", high = "blue") + 
+  # add count in each cell
+  geom_text(aes(label = n)) + 
+  # remove the color legend
+  guides(color = "none")
+
+# VS-NOTE: adjust transparency of the geom_tile lines? 
+
 ```
 
 ### Variable importance 
