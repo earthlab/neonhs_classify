@@ -46,9 +46,9 @@ train_data <- cleaned_data %>%
   tidyr::pivot_wider(names_from = band_idx, 
                      values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
-  dplyr::select(-spectraID) %>% 
+  dplyr::select(-spectraID) 
   # VS-NOTE: subset small # of samples for testing!!!
-  dplyr::sample_frac(0.5)
+  #dplyr::sample_frac(0.5)
 
 # convert genusSpecies to factor, so R does classification instead of regression.
 # reassign the factor levels after subsetting the training data
@@ -93,10 +93,10 @@ print(rf_classifier)
 
 ```{r formatted_conf_matrix, fig.height=12, fig.width=12}
 # nicely formatted confusion matrix using the rfPermute library
-confMatrix <- rfPermute::plotConfMat(rf = rf_classifier, 
-                                     title = "randomForest confusion matrix: training set") 
+#confMatrix <- rfPermute::plotConfMat(rf = rf_classifier, 
+#                                     title = "randomForest confusion matrix: training set") 
 
-confMatrix
+#confMatrix
 ```
 
 
@@ -144,11 +144,11 @@ rf_valid_results %>%
 
 ### Variable importance 
 
-```{r randomForest_varImpPlot_default, fig.height=10}
+```{r randomForest_varImpPlot_default, fig.height=6, fig.width=5}
 # default varImpPlot visualization in randomForest
 varImpPlot(rf_classifier)
 ```
-```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=10}
+```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=6}
 
 # format the randomForest variable importance for ggplot
 imp <- as.data.frame(varImpPlot(rf_classifier))
@@ -163,17 +163,38 @@ imp_top30_mda <- arrange(imp, desc(MeanDecreaseAccuracy)) %>%
 
 ggplot(imp_top30_mda, aes(x=reorder(varnames, MeanDecreaseAccuracy), 
                 y=MeanDecreaseAccuracy
-                ,color=MeanDecreaseAccuracy
+                #,color=MeanDecreaseAccuracy
                 )) + 
   geom_point() +
   geom_segment(aes(x=varnames,xend=varnames,y=0,yend=MeanDecreaseAccuracy)) +
-  scale_color_continuous(type = "viridis") +
+  #scale_color_continuous(type = "viridis") +
   ylab("MDA") +
   xlab("Variable Name") +
   ggtitle("RandomForest variable importance: Mean Decrease Accuracy (MDA)") +
   labs(color = "MDA") + 
   coord_flip() + 
   theme_minimal()
+```
+```{r varImp_byWavelength}
+# plot variable importance as a function of ordered wavelength bands 
+
+# isolate the band#'s and wavelength values
+band_wl_lut <- cleaned_data %>% select(band_idx, wavelength_nm) %>% 
+  # keep only rows with unique combinations of band_idx and wavelength_nm
+  distinct()
+
+# add a new column with wavelength_nm values
+imp <- merge(imp, band_wl_lut, by.x="varnames", by.y="band_idx")
+
+```
+
+```{r varImp_byWavelength_plot, fig.height=4, fig.width=7}
+ggplot(imp, aes(x=wavelength_nm,  
+                y=MeanDecreaseAccuracy)) + 
+  # add bars where each height is equal to the variable importance metric
+  geom_col() +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", y = "Variable importance (Mean Decrease in Accuracy)")  
 ```
 
 
