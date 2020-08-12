@@ -98,9 +98,48 @@ confMatrix <- rfPermute::plotConfMat(rf = rf_classifier,
 
 confMatrix
 ```
+Creating this confusion matrix to illustrate classification results for the TRAINING SET using ggplot: 
+
+```{r randomForest_train_confMatrix, fig.width=8, fig.height=8}
+
+# combine observed and predicted values into a single data frame
+rf_train_results <- tibble(obs = as.character(train_data$genusSpecies),
+                              pred = as.character(as.vector(rf_classifier$predicted)))
 
 
-```{r randomForest_valid_confMatrix, fig.width=12, fig.height=12}
+# list all combinations of true and predicted species 
+all_combos <- expand.grid(obs = unique(rf_train_results$obs), 
+				    pred = unique(rf_train_results$obs))
+
+# format the observed and predicted values into a conf matrix
+
+rf_train_results %>% 
+  # count number of each obs/pred combination
+  count(obs,pred) %>% 
+  # fill in combinations with counts of zero
+  complete(obs, pred, fill = list(n = 0)) %>% 
+  # add rows witth species combinations not in predicted set
+  right_join(all_combos) %>% 
+  # set NA values to 0 in the n column
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  # set raster cell fill color based on count
+  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
+  geom_raster() + 
+  # add boxes around diagonal cells
+  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
+  scale_color_manual(values = c(NA, "black")) + 
+  # rotate x axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Training Set") + 
+  scale_fill_gradient(low = "white", high = "#43a2ca") + 
+  # add count in each cell
+  geom_text(aes(label = n)) + 
+  # remove the color legend
+  guides(color = "none")
+```
+
+
+```{r randomForest_valid_confMatrix, fig.width=8, fig.height=8}
 
 # predict species for validation set
 p <- predict(rf_classifier, valid_data, type = "class")
@@ -128,18 +167,17 @@ rf_valid_results %>%
   ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
   geom_raster() + 
   # add boxes around diagonal cells
-  geom_tile(aes(color = obs == pred), size = 0.5) + 
+  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
   scale_color_manual(values = c(NA, "black")) + 
   # rotate x axis text 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(x = "Truth", y = "Predicted") + 
-  scale_fill_gradient(low = "white", high = "blue") + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Validation Set") + 
+  scale_fill_gradient(low = "white", high = "#43a2ca") + 
   # add count in each cell
   geom_text(aes(label = n)) + 
   # remove the color legend
   guides(color = "none")
 
-# VS-NOTE: adjust transparency of the geom_tile lines? 
 
 ```
 ```{r randomForest_valid_OA}
@@ -153,8 +191,9 @@ print(paste("Overall Accuracy of validation set species predictions:", round(OA_
 
 ```{r randomForest_varImpPlot_default}
 # default varImpPlot visualization in randomForest
-varImpPlot(rf_classifier)
+#varImpPlot(rf_classifier)
 ```
+
 ```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=6}
 
 # format the randomForest variable importance for ggplot
