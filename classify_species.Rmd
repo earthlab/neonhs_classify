@@ -1,7 +1,7 @@
 ---
 title: "Classify veg"
 author: "Victoria Scholl"
-date: "08/06/2020 Earth Lab GRA"
+date: "08/13/2020 Earth Lab GRA"
 output: html_document
 ---
 
@@ -18,7 +18,7 @@ library(rfPermute)
 
 ## Classify species
 
-```{r read_data}
+```{r read_data, message=FALSE}
 # start timer
 start_time <- Sys.time()
 
@@ -89,14 +89,14 @@ rf_classifier <- randomForest::randomForest(factor(genusSpecies) ~ .,
                                            #,do.trace=TRUE
                                            )
 
-print(rf_classifier)
+#print(rf_classifier)
 ```
 
 ### Confusion matrices
 
 Visualize classification results across species for the TRAINING SET using ggplot: 
 
-```{r randomForest_train_confMatrix, fig.width=8, fig.height=8, message=FALSE}
+```{r randomForest_train_confMatrix, fig.width=14, fig.height=14, message=FALSE}
 
 # combine observed and predicted values into a single data frame
 rf_train_results <- tibble(obs = as.character(train_data$genusSpecies),
@@ -133,10 +133,11 @@ rf_train_results %>%
   # remove the color legend
   guides(color = "none")
 ```
-Use the randomForest model to predict validation set species. 
-Visualize classification results across species for the VALIDATION SET using ggplot: 
 
-```{r randomForest_valid_confMatrix, fig.width=8, fig.height=8, message=FALSE}
+
+Use the randomForest model to predict validation set species. Visualize classification results across species for the VALIDATION SET using ggplot: 
+
+```{r randomForest_valid_confMatrix, fig.width=14, fig.height=14, message=FALSE}
 
 # predict species for validation set
 p <- predict(rf_classifier, valid_data, type = "class")
@@ -177,6 +178,8 @@ rf_valid_results %>%
 
 
 ```
+
+
 ```{r randomForest_OA}
 # calculate overall accuracy for training set predictions 
 OA_randomForest_train <- sum(rf_train_results$obs == rf_train_results$pred) / nrow(rf_train_results)
@@ -187,9 +190,11 @@ OA_randomForest_valid <- sum(rf_valid_results$obs == rf_valid_results$pred) / nr
 print(paste("Overall Accuracy of validation set SPECIES predictions:", round(OA_randomForest_valid, 4)))
 ```
 
+
+
 ### Variable importance 
 
-```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=6}
+```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=10}
 
 # default varImpPlot visualization in randomForest
 #varImpPlot(rf_classifier)
@@ -219,6 +224,8 @@ ggplot(imp_top30_mda, aes(x=reorder(varnames, MeanDecreaseAccuracy),
   coord_flip() + 
   theme_minimal()
 ```
+
+
 Perhaps variable importance would be more useful to illustrate as a function of wavelength...
 
 ```{r varImp_byWavelength}
@@ -234,7 +241,7 @@ imp <- merge(imp, band_wl_lut, by.x="varnames", by.y="band_idx")
 
 ```
 
-```{r varImp_byWavelength_plot, fig.height=4, fig.width=8}
+```{r varImp_byWavelength_plot, fig.height=6, fig.width=10}
 ggplot(imp, aes(x=wavelength_nm,  
                 y=MeanDecreaseAccuracy)) + 
   # add bars where each height is equal to the variable importance metric
@@ -248,7 +255,7 @@ ggplot(imp, aes(x=wavelength_nm,
 ```
 
 
-```{r varImp_Gini, fig.height=4, fig.width=8}
+```{r varImp_Gini, fig.height=6, fig.width=10}
 ggplot(imp, aes(x = wavelength_nm,  
                 y = MeanDecreaseGini)) + 
   # add bars where each height is equal to the variable importance metric
@@ -316,12 +323,12 @@ rf_classifier_genus <- randomForest::randomForest(factor(genus) ~ .,
                                            importance=TRUE
                                            )
 
-print(rf_classifier_genus)
+#print(rf_classifier_genus)
 ```
 
 Predict genus for the validation set, and create confusion matrix and variable importance plots.
 
-```{r randomForest_valid_confMatrix_genus, fig.width=6, fig.height=6, message=FALSE}
+```{r randomForest_valid_confMatrix_genus, fig.width=12, fig.height=12, message=FALSE}
 # predict species for validation set
 p_genus <- predict(rf_classifier_genus, valid_data_genus, type = "class")
 
@@ -386,7 +393,7 @@ rownames(imp_genus) <- NULL
 imp_genus <- merge(imp_genus, band_wl_lut, by.x="varnames", by.y="band_idx")
 ```
 
-```{r varImp_MDA_genus, fig.height=4, fig.width=8}
+```{r varImp_MDA_genus, fig.height=6, fig.width=10}
 ggplot(imp_genus, aes(x=wavelength_nm,  
                 y=MeanDecreaseAccuracy)) + 
   # add bars where each height is equal to the variable importance metric
@@ -400,7 +407,7 @@ ggplot(imp_genus, aes(x=wavelength_nm,
 ```
 
 
-```{r varImp_Gini_genus, fig.height=4, fig.width=8}
+```{r varImp_Gini_genus, fig.height=6, fig.width=10}
 ggplot(imp_genus, aes(x = wavelength_nm,  
                 y = MeanDecreaseGini)) + 
   # add bars where each height is equal to the variable importance metric
