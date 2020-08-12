@@ -199,10 +199,36 @@ imp <- merge(imp, band_wl_lut, by.x="varnames", by.y="band_idx")
 ggplot(imp, aes(x=wavelength_nm,  
                 y=MeanDecreaseAccuracy)) + 
   # add bars where each height is equal to the variable importance metric
-  geom_col() +
+  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
   theme_minimal() + 
-  labs(x = "Wavelength (nm)", y = "Variable importance (Mean Decrease in Accuracy)")  
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDA)",
+       title = "Variable Importance: Mean Decrease Accuracy (MDA) vs. Wavelength",
+       fill = "MDA")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca")
 ```
+
+
+```{r varImp_Gini, fig.height=4, fig.width=8}
+ggplot(imp, aes(x = wavelength_nm,  
+                y = MeanDecreaseGini)) + 
+  # add bars where each height is equal to the variable importance metric
+  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDG)",
+       title = "Variable Importance: Mean Decrease Gini (MDG) vs. Wavelength",
+       fill = "MDG")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca")
+```
+
+
+```{r}
+
+```
+
+
+
 
 
 ```{r caret}
