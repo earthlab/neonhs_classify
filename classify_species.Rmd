@@ -19,6 +19,9 @@ library(rfPermute)
 ## Classify species
 
 ```{r read_data}
+# start timer
+start_time <- Sys.time()
+
 # read the cleaned data, labeled for train, test, 
 cleaned_data <- read_csv(here::here("data","cleaned_spectra.csv"))
 ```
@@ -186,12 +189,10 @@ print(paste("Overall Accuracy of validation set species predictions:", round(OA_
 
 ### Variable importance 
 
-```{r randomForest_varImpPlot_default}
+```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=6}
+
 # default varImpPlot visualization in randomForest
 #varImpPlot(rf_classifier)
-```
-
-```{r randomForest_varImpPlot_ggplot, fig.height=8, fig.width=6}
 
 # format the randomForest variable importance for ggplot
 imp <- as.data.frame(varImpPlot(rf_classifier))
@@ -350,5 +351,16 @@ rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ .,
 #https://afit-r.github.io/random_forests#tune
 
 
+```
+
+```{r how_long_did_this_take}
+# stop timer
+end_time <- Sys.time()
+
+elapsed_time <- end_time - start_time
+
+print(difftime(end_time, start_time, 
+         units = c("auto", "secs", "mins", "hours",
+                   "days", "weeks")))
 ```
 
