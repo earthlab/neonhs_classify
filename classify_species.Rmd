@@ -423,7 +423,7 @@ ggplot(imp_genus, aes(x = wavelength_nm,
 ## Parameter tuning
 
 
-```{r caret, include=FALSE}
+```{r caret, include=FALSE, eval = FALSE}
 # caret = Classification And REgression Training 
 
 # tuning parameters to try: ntree, mtry
@@ -454,7 +454,7 @@ print(rf_gridsearch)
 plot(rf_gridsearch)
 ```
 
-```{r include=FALSE}
+```{r include=FALSE, eval = FALSE}
 # https://rpubs.com/phamdinhkhanh/389752
 
 set.seed(44)
@@ -479,7 +479,9 @@ summary(results)
 
 dotplot(results)
 ```
-```{r}
+
+
+```{r include=FALSE, eval = FALSE}
 tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
 
 tuneGrid <- expand.grid(mtry = 21)
@@ -493,7 +495,7 @@ rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ .,
                 verbose = TRUE)
 ```
 
-```{r include=FALSE}
+```{r include=FALSE, eval = FALSE}
 # caret ranger? 
 # https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument 
 # parallel
@@ -502,7 +504,7 @@ rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ .,
 # conf matrix + var imp plot formatted
 ```
 
-```{r include=FALSE}
+```{r include=FALSE, eval = FALSE}
 #https://afit-r.github.io/random_forests#tune
 
 
