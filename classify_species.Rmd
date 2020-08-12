@@ -168,7 +168,7 @@ rf_valid_results %>%
   scale_color_manual(values = c(NA, "black")) + 
   # rotate x axis text 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Validation Set") + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True SPECIES for Validation Set") + 
   scale_fill_gradient(low = "white", high = "#43a2ca") + 
   # add count in each cell
   geom_text(aes(label = n)) + 
@@ -180,11 +180,11 @@ rf_valid_results %>%
 ```{r randomForest_OA}
 # calculate overall accuracy for training set predictions 
 OA_randomForest_train <- sum(rf_train_results$obs == rf_train_results$pred) / nrow(rf_train_results)
-print(paste("Overall Accuracy of validation set species predictions:", round(OA_randomForest_train, 4)))
+print(paste("Overall Accuracy of training set SPECIES predictions:", round(OA_randomForest_train, 4)))
 
 # calculate overall accuracy for validation set predictions 
 OA_randomForest_valid <- sum(rf_valid_results$obs == rf_valid_results$pred) / nrow(rf_valid_results)
-print(paste("Overall Accuracy of validation set species predictions:", round(OA_randomForest_valid, 4)))
+print(paste("Overall Accuracy of validation set SPECIES predictions:", round(OA_randomForest_valid, 4)))
 ```
 
 ### Variable importance 
@@ -219,6 +219,8 @@ ggplot(imp_top30_mda, aes(x=reorder(varnames, MeanDecreaseAccuracy),
   coord_flip() + 
   theme_minimal()
 ```
+Perhaps variable importance would be more useful to illustrate as a function of wavelength...
+
 ```{r varImp_byWavelength}
 # plot variable importance as a function of ordered wavelength bands 
 
@@ -236,7 +238,7 @@ imp <- merge(imp, band_wl_lut, by.x="varnames", by.y="band_idx")
 ggplot(imp, aes(x=wavelength_nm,  
                 y=MeanDecreaseAccuracy)) + 
   # add bars where each height is equal to the variable importance metric
-  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
+  geom_col(aes(fill = MeanDecreaseAccuracy), color = NA) +
   theme_minimal() + 
   labs(x = "Wavelength (nm)", 
        y = "Variable importance (MDA)",
@@ -259,16 +261,169 @@ ggplot(imp, aes(x = wavelength_nm,
   scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca")
 ```
 
+## Classify genus
 
-```{r}
+```{r set_up_data_genus}
+# columns to keep for training the classifier
+cols_to_keep_genus <- c("spectraID", "band_idx", "reflectance", "genus")
 
+# training set -------------------------------------------------
+# select and format the training data 
+train_data_genus <- cleaned_data %>% 
+  # keep only the spectra marked as part of the "train" or "test" set
+    # train 60% + test 20% = 80% for training with k-fold cross validation
+  dplyr::filter(group == "train" | group == "test") %>% 
+  # remove all entries with NA reflectance values, indicative of bad bands
+  dplyr::filter(!is.na(reflectance)) %>% 
+  # keep only the columns needed for classification
+  dplyr::select(all_of(cols_to_keep_genus)) %>%
+  # reshape the data from long to wide so each row is a spectrum, 
+    # and each col contains reflectance per band.
+  tidyr::pivot_wider(names_from = band_idx, 
+                     values_from = reflectance) %>% 
+  # remove spectraID since it's not a descriptive feature 
+  dplyr::select(-spectraID) 
+
+# convert label to factor, so R does classification instead of regression
+train_data_genus$genus <- factor(train_data_genus$genus)
+
+
+
+# validation set -----------------------------------------------
+valid_data_genus <- cleaned_data %>% 
+  #  keep only the spectra marked as part of the independent validation set
+  dplyr::filter(group == "valid") %>% 
+  # remove all entries with NA reflectance values, indicative of bad bands
+  dplyr::filter(!is.na(reflectance)) %>% 
+  # keep only the columns needed for classification
+  dplyr::select(all_of(cols_to_keep_genus)) %>%
+  # reshape the data from long to wide so each row is a spectrum, 
+    # and each col contains reflectance per band.
+  tidyr::pivot_wider(names_from = band_idx, 
+                     values_from = reflectance) %>% 
+  # remove spectraID since it's not a descriptive feature 
+  dplyr::select(-spectraID) 
+
+valid_data_genus$genus <- factor(valid_data_genus$genus)
+```
+
+```{r randomForest_train_genus}
+set.seed(44)
+
+# train random forest classifiers: predict genus
+rf_classifier_genus <- randomForest::randomForest(factor(genus) ~ ., 
+                                           data=train_data_genus, 
+                                           importance=TRUE
+                                           )
+
+print(rf_classifier_genus)
+```
+
+Predict genus for the validation set, and create confusion matrix and variable importance plots.
+
+```{r randomForest_valid_confMatrix_genus, fig.width=6, fig.height=6, message=FALSE}
+# predict species for validation set
+p_genus <- predict(rf_classifier_genus, valid_data_genus, type = "class")
+
+# combine observed and predicted values into a single data frame
+rf_valid_results_genus <- tibble(obs = as.character(valid_data_genus$genus),
+                              pred = as.character(as.vector(p_genus)))
+
+# list all combinations of true and predicted species 
+all_combos_genus <- expand.grid(obs = unique(rf_valid_results_genus$obs), 
+				    pred = unique(rf_valid_results_genus$obs))
+
+# format the observed and predicted values into a conf matrix
+
+rf_valid_results_genus %>% 
+  # count number of each obs/pred combination
+  count(obs,pred) %>% 
+  # fill in combinations with counts of zero
+  complete(obs, pred, fill = list(n = 0)) %>% 
+  # add rows witth species combinations not in predicted set
+  right_join(all_combos_genus) %>% 
+  # set NA values to 0 in the n column
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  # set raster cell fill color based on count
+  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
+  geom_raster() + 
+  # add boxes around diagonal cells
+  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
+  scale_color_manual(values = c(NA, "black")) + 
+  # rotate x axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True GENUS for Validation Set") + 
+  scale_fill_gradient(low = "white", high = "#fc8d59") + 
+  # add count in each cell
+  geom_text(aes(label = n)) + 
+  # remove the color legend
+  guides(color = "none")
+```
+
+```{r randomForest_OA_genus}
+# combine observed and predicted values into a single data frame
+rf_train_results_genus <- tibble(obs = as.character(train_data_genus$genus),
+                              pred = as.character(as.vector(rf_classifier_genus$predicted)))
+
+# calculate overall accuracy for training set predictions 
+OA_randomForest_train_genus <- sum(rf_train_results_genus$obs == rf_train_results_genus$pred) / nrow(rf_train_results_genus)
+print(paste("Overall Accuracy of training set genus predictions:", round(OA_randomForest_train_genus, 4)))
+
+# calculate overall accuracy for validation set predictions 
+OA_randomForest_valid_genus <- sum(rf_valid_results_genus$obs == rf_valid_results_genus$pred) / nrow(rf_valid_results)
+print(paste("Overall Accuracy of validation set genus predictions:", round(OA_randomForest_valid_genus, 4)))
+```
+
+
+
+### Variable importance 
+
+```{r randomForest_varImpPlot_ggplot_genus}
+imp_genus <- as.data.frame(varImpPlot(rf_classifier_genus))
+imp_genus$varnames <- rownames(imp_genus) # row names to column
+rownames(imp_genus) <- NULL  
+# add a new column with wavelength_nm values
+imp_genus <- merge(imp_genus, band_wl_lut, by.x="varnames", by.y="band_idx")
+```
+
+```{r varImp_MDA_genus, fig.height=4, fig.width=8}
+ggplot(imp_genus, aes(x=wavelength_nm,  
+                y=MeanDecreaseAccuracy)) + 
+  # add bars where each height is equal to the variable importance metric
+  geom_col(aes(fill = MeanDecreaseAccuracy), color = NA) +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDA)",
+       title = "GENUS classification variable importance: Mean Decrease Accuracy (MDA) vs. Wavelength",
+       fill = "MDA")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#fc8d59")
+```
+
+
+```{r varImp_Gini_genus, fig.height=4, fig.width=8}
+ggplot(imp_genus, aes(x = wavelength_nm,  
+                y = MeanDecreaseGini)) + 
+  # add bars where each height is equal to the variable importance metric
+  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDG)",
+       title = "GENUS classification variable importance: Mean Decrease Gini (MDG) vs. Wavelength",
+       fill = "MDG")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#fc8d59")
 ```
 
 
 
 
 
-```{r caret}
+
+
+
+## Parameter tuning
+
+
+```{r caret, include=FALSE}
 # caret = Classification And REgression Training 
 
 # tuning parameters to try: ntree, mtry
@@ -299,7 +454,7 @@ print(rf_gridsearch)
 plot(rf_gridsearch)
 ```
 
-```{r}
+```{r include=FALSE}
 # https://rpubs.com/phamdinhkhanh/389752
 
 set.seed(44)
@@ -338,7 +493,7 @@ rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ .,
                 verbose = TRUE)
 ```
 
-```{r}
+```{r include=FALSE}
 # caret ranger? 
 # https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument 
 # parallel
@@ -347,7 +502,7 @@ rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ .,
 # conf matrix + var imp plot formatted
 ```
 
-```{r}
+```{r include=FALSE}
 #https://afit-r.github.io/random_forests#tune
 
 
