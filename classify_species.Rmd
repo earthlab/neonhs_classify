@@ -91,16 +91,9 @@ print(rf_classifier)
 
 ### Confusion matrices
 
-```{r formatted_conf_matrix, fig.height=7, fig.width=7}
-# nicely formatted confusion matrix using the rfPermute library
-confMatrix <- rfPermute::plotConfMat(rf = rf_classifier, 
-                                     title = "randomForest confusion matrix: training set") 
+Visualize classification results across species for the TRAINING SET using ggplot: 
 
-confMatrix
-```
-Creating this confusion matrix to illustrate classification results for the TRAINING SET using ggplot: 
-
-```{r randomForest_train_confMatrix, fig.width=8, fig.height=8}
+```{r randomForest_train_confMatrix, fig.width=8, fig.height=8, message=FALSE}
 
 # combine observed and predicted values into a single data frame
 rf_train_results <- tibble(obs = as.character(train_data$genusSpecies),
@@ -137,9 +130,10 @@ rf_train_results %>%
   # remove the color legend
   guides(color = "none")
 ```
+Use the randomForest model to predict validation set species. 
+Visualize classification results across species for the VALIDATION SET using ggplot: 
 
-
-```{r randomForest_valid_confMatrix, fig.width=8, fig.height=8}
+```{r randomForest_valid_confMatrix, fig.width=8, fig.height=8, message=FALSE}
 
 # predict species for validation set
 p <- predict(rf_classifier, valid_data, type = "class")
@@ -180,11 +174,14 @@ rf_valid_results %>%
 
 
 ```
-```{r randomForest_valid_OA}
+```{r randomForest_OA}
+# calculate overall accuracy for training set predictions 
+OA_randomForest_train <- sum(rf_train_results$obs == rf_train_results$pred) / nrow(rf_train_results)
+print(paste("Overall Accuracy of validation set species predictions:", round(OA_randomForest_train, 4)))
+
 # calculate overall accuracy for validation set predictions 
 OA_randomForest_valid <- sum(rf_valid_results$obs == rf_valid_results$pred) / nrow(rf_valid_results)
-
-print(paste("Overall Accuracy of validation set species predictions:", round(OA_randomForest_valid, 3)))
+print(paste("Overall Accuracy of validation set species predictions:", round(OA_randomForest_valid, 4)))
 ```
 
 ### Variable importance 
