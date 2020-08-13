@@ -486,7 +486,7 @@ plot(model)
 
 
 
-```{r optimize_ntree, include=FALSE, eval = FALSE}
+```{r optimize_ntree}
 # https://rpubs.com/phamdinhkhanh/389752
 
 start.time = Sys.time()
@@ -500,7 +500,7 @@ registerDoParallel(cl)
 
 # iteratively check ntree values 
 modellist <- list()
-for (ntree in c(10,50,100)){
+for (ntree in c(100, 200, 500, 1000, 2000)){
   print(ntree)
   fit <- train(factor(genusSpecies) ~ ., 
                 data = train_data_subset, 
