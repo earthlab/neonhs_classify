@@ -430,29 +430,6 @@ ggplot(imp_genus, aes(x = wavelength_nm,
 ## Parameter tuning
 
 
-```{r caret, include=FALSE, eval = FALSE}
-# caret = Classification And REgression Training 
-
-# tuning parameters to try: ntree, mtry
-tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
-
-start_time = Sys.time()
-
-rf_gridsearch <- caret::train(factor(genusSpecies) ~ ., 
-                data = train_data, 
-                method = "rf",
-                metric = "Accuracy",
-                tuneGrid=tunegrid, 
-                verbose = TRUE)
-
-end_time = Sys.time()
-
-end_time - start_time
-
-# Print the results
-print(rf_gridsearch)
-plot(rf_gridsearch)
-```
 
 ```{r caret_parallel}
 
@@ -461,13 +438,35 @@ library(doParallel)
 
 start.time = Sys.time()
 
+# subset data for testing 
+train_data_subset <- cleaned_data %>% 
+  # keep only the spectra marked as part of the "train" or "test" set
+    # train 60% + test 20% = 80% for training with k-fold cross validation
+  dplyr::filter(group == "train" | group == "test") %>% 
+  # remove all entries with NA reflectance values, indicative of bad bands
+  dplyr::filter(!is.na(reflectance)) %>% 
+  # filter spectra identified at the genus level, indicated by species == "sp."
+  dplyr::filter(species != "sp.") %>% 
+  # keep only the columns needed for classification
+  dplyr::select(all_of(cols_to_keep)) %>%
+  # reshape the data from long to wide so each row is a spectrum, 
+    # and each col contains reflectance per band.
+  tidyr::pivot_wider(names_from = band_idx, 
+                     values_from = reflectance) %>% 
+  # remove spectraID since it's not a descriptive feature 
+  dplyr::select(-spectraID) %>%
+  # VS-NOTE: subset small # of samples for testing!!!
+  dplyr::sample_frac(0.6)
+
+
 cl <- makePSOCKcluster(parallel::detectCores() -1) 
 
 registerDoParallel(cl)
 
 ## All subsequent models are then run in parallel
 model <- train(factor(genusSpecies) ~ ., 
-               data = train_data, 
+               data = train_data_subset, 
+               tuneGrid = expand.grid(mtry = seq(from = 6, to = 27, by = 3)),
                method = "rf",
                metric = "Accuracy")
 
@@ -477,64 +476,59 @@ stopCluster(cl)
 end.time = Sys.time()
 end.time - start.time
 
+# took 18 minutes to test 8 values of mtry with 60% subset of training data
+
+```
+
+```{r plot_mtry_tuning}
+plot(model)
 ```
 
 
-```{r include=FALSE, eval = FALSE}
+
+```{r optimize_ntree, include=FALSE, eval = FALSE}
 # https://rpubs.com/phamdinhkhanh/389752
 
+start.time = Sys.time()
+
 set.seed(44)
+
+# start parallel cluster
+cl <- makePSOCKcluster(parallel::detectCores() -1) 
+registerDoParallel(cl)
+
+
 # iteratively check ntree values 
-for (ntree in c(100,500,1000)){
+modellist <- list()
+for (ntree in c(10,50,100)){
   print(ntree)
-  fit <- train(caret::train(factor(genusSpecies) ~ ., 
-                data = train_data, 
+  fit <- train(factor(genusSpecies) ~ ., 
+                data = train_data_subset, 
                 method = "rf",
                 metric = "Accuracy",
                 ntree = ntree,
-                tuneGrid=expand.grid(mtry = 21), 
-                trControl=control,
-                verbose = TRUE))
+                tuneGrid=expand.grid(mtry = 24), 
+                verbose = TRUE)
   key <- toString(ntree)
   modellist[[key]] <- fit
 }
+
+## When you are done:
+stopCluster(cl)
+
 
 #Compare results
 results <- resamples(modellist)
 summary(results)
 
 dotplot(results)
+
+
+end.time = Sys.time()
+end.time - start.time
 ```
 
 
-```{r include=FALSE, eval = FALSE}
-tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
-
-tuneGrid <- expand.grid(mtry = 21)
-
-rf_mtry_ntree <- caret::train(factor(genusSpecies) ~ ., 
-                data = train_data, 
-                method = "rf",
-                metric = "Accuracy",
-                ntree = 100,
-                tuneGrid=tunegrid,
-                verbose = TRUE)
-```
-
-```{r include=FALSE, eval = FALSE}
-# caret ranger? 
-# https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument 
-# parallel
-# k-fold cross val (merge train+valid, keep separate test set) OR train/test/valid split
-# test ntree AND mtry values 
-# conf matrix + var imp plot formatted
-```
-
-```{r include=FALSE, eval = FALSE}
-#https://afit-r.github.io/random_forests#tune
-
-
-```
 
 ```{r how_long_did_this_take}
 # stop timer
