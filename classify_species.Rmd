@@ -385,7 +385,7 @@ print(paste("Overall Accuracy of validation set genus predictions:", round(OA_ra
 
 ### Variable importance 
 
-```{r randomForest_varImpPlot_ggplot_genus}
+```{r randomForest_varImpPlot_ggplot_genus, results="hide"}
 imp_genus <- as.data.frame(varImpPlot(rf_classifier_genus))
 imp_genus$varnames <- rownames(imp_genus) # row names to column
 rownames(imp_genus) <- NULL  
@@ -436,12 +436,6 @@ ggplot(imp_genus, aes(x = wavelength_nm,
 # tuning parameters to try: ntree, mtry
 tunegrid <- expand.grid(mtry = seq(from = 3, to = 24, by = 3))
 
-#10 folds repeat 3 times --> alternative to the train/test/valid, dont need both
-control <- trainControl(method='repeatedcv', 
-                        number=10, 
-                        repeats=3,
-                        search = "grid")
-
 start_time = Sys.time()
 
 rf_gridsearch <- caret::train(factor(genusSpecies) ~ ., 
@@ -449,7 +443,6 @@ rf_gridsearch <- caret::train(factor(genusSpecies) ~ .,
                 method = "rf",
                 metric = "Accuracy",
                 tuneGrid=tunegrid, 
-                trControl=control,
                 verbose = TRUE)
 
 end_time = Sys.time()
@@ -460,6 +453,32 @@ end_time - start_time
 print(rf_gridsearch)
 plot(rf_gridsearch)
 ```
+
+```{r caret_parallel}
+
+library(parallel)
+library(doParallel)
+
+start.time = Sys.time()
+
+cl <- makePSOCKcluster(parallel::detectCores() -1) 
+
+registerDoParallel(cl)
+
+## All subsequent models are then run in parallel
+model <- train(factor(genusSpecies) ~ ., 
+               data = train_data, 
+               method = "rf",
+               metric = "Accuracy")
+
+## When you are done:
+stopCluster(cl)
+
+end.time = Sys.time()
+end.time - start.time
+
+```
+
 
 ```{r include=FALSE, eval = FALSE}
 # https://rpubs.com/phamdinhkhanh/389752
