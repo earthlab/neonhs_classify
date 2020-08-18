@@ -518,9 +518,11 @@ train_data_subset <- cleaned_data %>%
   tidyr::pivot_wider(names_from = band_idx, 
                      values_from = reflectance) %>% 
   # remove spectraID since it's not a descriptive feature 
-  dplyr::select(-spectraID) %>%
+  dplyr::select(-spectraID) 
+
+#%>%
   # VS-NOTE: subset small # of samples for testing!!!
-  dplyr::sample_frac(0.6)
+  #dplyr::sample_frac(0.6)
 
 
 cl <- makePSOCKcluster(parallel::detectCores() -1) 
@@ -564,7 +566,7 @@ registerDoParallel(cl)
 
 # iteratively check ntree values 
 modellist <- list()
-for (ntree in c(100, 200, 500, 1000, 2000, 5000)){
+for (ntree in c(100, 200, 500, 1000, 2000)){
   print(ntree)
   fit <- train(factor(genusSpecies) ~ ., 
                 data = train_data_subset, 
