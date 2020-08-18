@@ -268,6 +268,70 @@ ggplot(imp, aes(x = wavelength_nm,
   scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca")
 ```
 
+## Add wavelengths of interest
+
+For interpretation of the variable importance plots, wavelengths of interest for the red, green, blue, and NIR bands are added here. The wavelength ranges are based on [Landsat 8 designations](https://www.neonscience.org/hyper-spec-intro). 
+
+```{r vertical_dashed_lines}
+# plot variable importance with wavelengths of interest marked by dashed vertical lines 
+
+ggplot(imp, aes(x = wavelength_nm,  
+                y = MeanDecreaseGini)) + 
+  
+  # add vertical dashed lines to indicate notable wavelengths
+  geom_vline(xintercept=480, linetype="dashed", color="blue", size=1, alpha=0.5) + # BLUE 
+  geom_vline(xintercept=550, linetype="dashed", color="green", size=1, alpha=0.5) + # GREEN
+  geom_vline(xintercept=650, linetype="dashed", color="red", size=1, alpha=0.5) + # RED
+  geom_vline(xintercept=870, linetype="dashed", color="grey30", size=1, alpha=0.5) + # NIR 
+  geom_vline(xintercept=1600, linetype="dashed", color="chocolate4", size=1, alpha=0.5) + # SWIR
+  
+  
+  # add bars where each height is equal to the variable importance metric
+  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDG)",
+       title = "Variable Importance: Mean Decrease Gini (MDG) vs. Wavelength",
+       fill = "MDG")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca") 
+
+
+```
+```{r vertical_shaded_regions}
+# plot variable importance with wavelengths of interest marked by dashed vertical lines 
+
+ggplot(imp, aes(x = wavelength_nm,  
+                y = MeanDecreaseGini)) + 
+  
+  # add vertical shaded regions to indicate notable wavelengths
+  annotate(geom = "rect", xmin = 450, xmax = 510, ymin = -5, ymax = Inf, fill = "blue", alpha = 0.1) + # BLUE
+  annotate(geom = "rect", xmin = 530, xmax = 590, ymin = -5, ymax = Inf, fill = "green", alpha = 0.1) + # GREEN
+  annotate(geom = "rect", xmin = 640, xmax = 670, ymin = -5, ymax = Inf, fill = "red", alpha = 0.1) + # RED
+  annotate(geom = "rect", xmin = 850, xmax = 880, ymin = -5, ymax = Inf, fill = "grey30", alpha = 0.1)  + # NIR 
+  annotate(geom = "rect", xmin = 1570, xmax = 1650, ymin = -5, ymax = Inf, fill = "chocolate4", alpha = 0.1)  + # SWIR
+  
+  # add bars where each height is equal to the variable importance metric
+  geom_col(aes(fill = MeanDecreaseGini), color = NA) +
+  theme_minimal() + 
+  labs(x = "Wavelength (nm)", 
+       y = "Variable importance (MDG)",
+       title = "Variable Importance: Mean Decrease Gini (MDG) vs. Wavelength",
+       fill = "MDG")  + 
+  scale_fill_gradient(low = "#d9d9d9", high = "#43a2ca") 
+  
+
+```
+
+```{r varImp_with_refl_spectrum}
+
+imp_and_refl <- imp
+
+
+
+```
+
+
+
 ## Classify genus
 
 ```{r set_up_data_genus}
