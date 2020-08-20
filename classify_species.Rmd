@@ -191,7 +191,7 @@ dotplot(results)
 
 We classified species using the optimal values for mtry (27) and ntree (1000)
 
-```{r randomForest_train_species}
+```{r randomForest_species_train}
 set.seed(44)
 
 start.time = Sys.time()
@@ -200,13 +200,20 @@ start.time = Sys.time()
 cl <- makePSOCKcluster(parallel::detectCores() -1) 
 registerDoParallel(cl)
 
-# train RF model using the optimal parameters 
-rf_classifier_species <- train(factor(genusSpecies) ~ ., 
-                              data = train_data, 
-                              method = "rf",
-                              ntree = 1000,
-                              tuneGrid=expand.grid(mtry = 27),
-                              metric = "Accuracy")
+# CARET train RF model using the optimal parameters 
+#rf_classifier_species <- train(factor(genusSpecies) ~ ., 
+#                              data = train_data, 
+#                              method = "rf",
+#                              ntree = 1000,
+#                              tuneGrid=expand.grid(mtry = 27),
+#                              metric = "Accuracy")
+
+# RANDOMFOREST train RF model using optimal parameters
+rf_classifier_species <- randomForest::randomForest(factor(genusSpecies) ~ ., 
+                                           data=train_data, 
+                                           importance=TRUE,
+                                            mtry = 27,
+                                            ntree = 1000)
 
 # when you are done with parallel
 stopCluster(cl)
@@ -216,12 +223,124 @@ end.time - start.time
 
 # show classification results
 print(rf_classifier_species)
+```
 
+```{r randomForest_species_valid}
 # predict species using validation set
-#p <- predict(rf_classifier_species, valid_data, type = "class")
+rf_valid_preds_species <- predict(rf_classifier_species, new_data = valid_data)
+
+```
+
+### Overall Accuracy 
+
+```{r randomForest_OA}
+
+# combine observed and predicted values into a single data frame
+rf_train_results <- tibble(obs = as.character(train_data$genusSpecies),
+                           pred = as.character(as.vector(rf_classifier_species$pred)))
+
+rf_valid_results <- tibble(obs = as.character(valid_data$genusSpecies),
+                              pred = as.character(as.vector(rf_valid_preds_species)))
+
+# calculate overall accuracy for training set predictions 
+OA_randomForest_train <- sum(rf_train_results$obs == rf_train_results$pred) / nrow(rf_train_results)
+print(paste("Overall Accuracy of training set SPECIES predictions:", round(OA_randomForest_train, 4)))
+
+# calculate overall accuracy for validation set predictions 
+OA_randomForest_valid <- sum(rf_valid_results$obs == rf_valid_results$pred) / nrow(rf_valid_results)
+print(paste("Overall Accuracy of validation set SPECIES predictions:", round(OA_randomForest_valid, 4)))
+```
+
+
+### Confusion Matrices
+
+### Variable Importance 
+
+Visualize classification results across species for the TRAINING SET using ggplot: 
+
+```{r randomForest_train_confMatrix, fig.width=14, fig.height=14, message=FALSE}
+
+# list all combinations of true and predicted species 
+all_combos <- expand.grid(obs = unique(rf_train_results$obs), 
+				    pred = unique(rf_train_results$obs))
+
+# format the observed and predicted values into a conf matrix
+
+rf_train_results %>% 
+  # count number of each obs/pred combination
+  count(obs,pred) %>% 
+  # fill in combinations with counts of zero
+  complete(obs, pred, fill = list(n = 0)) %>% 
+  # add rows witth species combinations not in predicted set
+  right_join(all_combos) %>% 
+  # set NA values to 0 in the n column
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  # set raster cell fill color based on count
+  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
+  geom_raster() + 
+  # add boxes around diagonal cells
+  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
+  scale_color_manual(values = c(NA, "black")) + 
+  # rotate x axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Training Set") + 
+  scale_fill_gradient(low = "white", high = "#43a2ca") + 
+  # add count in each cell
+  geom_text(aes(label = n)) + 
+  # remove the color legend
+  guides(color = "none")
+```
+
+
+Use the randomForest model to predict validation set species. Visualize classification results across species for the VALIDATION SET using ggplot: 
+
+```{r randomForest_valid_confMatrix, fig.width=14, fig.height=14, message=FALSE}
+
+# predict species for validation set
+p <- predict(rf_classifier, valid_data, type = "class")
+
+# combine observed and predicted values into a single data frame
+rf_valid_results <- tibble(obs = as.character(valid_data$genusSpecies),
+                              pred = as.character(as.vector(p)))
+
+# list all combinations of true and predicted species 
+all_combos <- expand.grid(obs = unique(rf_valid_results$obs), 
+				    pred = unique(rf_valid_results$obs))
+
+# format the observed and predicted values into a conf matrix
+
+rf_valid_results %>% 
+  # count number of each obs/pred combination
+  count(obs,pred) %>% 
+  # fill in combinations with counts of zero
+  complete(obs, pred, fill = list(n = 0)) %>% 
+  # add rows witth species combinations not in predicted set
+  right_join(all_combos) %>% 
+  # set NA values to 0 in the n column
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  # set raster cell fill color based on count
+  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
+  geom_raster() + 
+  # add boxes around diagonal cells
+  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
+  scale_color_manual(values = c(NA, "black")) + 
+  # rotate x axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True SPECIES for Validation Set") + 
+  scale_fill_gradient(low = "white", high = "#43a2ca") + 
+  # add count in each cell
+  geom_text(aes(label = n)) + 
+  # remove the color legend
+  guides(color = "none")
 
 
 ```
+
+
+
+
+
+
 
 
 
@@ -379,106 +498,6 @@ ggplot(imp_genus, aes(x = wavelength_nm,
 
 
 
-
-######
-
-### Confusion matrices
-
-Visualize classification results across species for the TRAINING SET using ggplot: 
-
-```{r randomForest_train_confMatrix, fig.width=14, fig.height=14, message=FALSE}
-
-# combine observed and predicted values into a single data frame
-rf_train_results <- tibble(obs = as.character(train_data$genusSpecies),
-                              pred = as.character(as.vector(rf_classifier$predicted)))
-
-
-# list all combinations of true and predicted species 
-all_combos <- expand.grid(obs = unique(rf_train_results$obs), 
-				    pred = unique(rf_train_results$obs))
-
-# format the observed and predicted values into a conf matrix
-
-rf_train_results %>% 
-  # count number of each obs/pred combination
-  count(obs,pred) %>% 
-  # fill in combinations with counts of zero
-  complete(obs, pred, fill = list(n = 0)) %>% 
-  # add rows witth species combinations not in predicted set
-  right_join(all_combos) %>% 
-  # set NA values to 0 in the n column
-  mutate(n = ifelse(is.na(n), 0, n)) %>% 
-  # set raster cell fill color based on count
-  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
-  geom_raster() + 
-  # add boxes around diagonal cells
-  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
-  scale_color_manual(values = c(NA, "black")) + 
-  # rotate x axis text 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Training Set") + 
-  scale_fill_gradient(low = "white", high = "#43a2ca") + 
-  # add count in each cell
-  geom_text(aes(label = n)) + 
-  # remove the color legend
-  guides(color = "none")
-```
-
-
-Use the randomForest model to predict validation set species. Visualize classification results across species for the VALIDATION SET using ggplot: 
-
-```{r randomForest_valid_confMatrix, fig.width=14, fig.height=14, message=FALSE}
-
-# predict species for validation set
-p <- predict(rf_classifier, valid_data, type = "class")
-
-# combine observed and predicted values into a single data frame
-rf_valid_results <- tibble(obs = as.character(valid_data$genusSpecies),
-                              pred = as.character(as.vector(p)))
-
-# list all combinations of true and predicted species 
-all_combos <- expand.grid(obs = unique(rf_valid_results$obs), 
-				    pred = unique(rf_valid_results$obs))
-
-# format the observed and predicted values into a conf matrix
-
-rf_valid_results %>% 
-  # count number of each obs/pred combination
-  count(obs,pred) %>% 
-  # fill in combinations with counts of zero
-  complete(obs, pred, fill = list(n = 0)) %>% 
-  # add rows witth species combinations not in predicted set
-  right_join(all_combos) %>% 
-  # set NA values to 0 in the n column
-  mutate(n = ifelse(is.na(n), 0, n)) %>% 
-  # set raster cell fill color based on count
-  ggplot(aes(x = obs, y = fct_rev(pred), fill = n)) + 
-  geom_raster() + 
-  # add boxes around diagonal cells
-  geom_tile(aes(color = obs == pred, width = 0.95, height = 0.95), size = 0.5) + 
-  scale_color_manual(values = c(NA, "black")) + 
-  # rotate x axis text 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True SPECIES for Validation Set") + 
-  scale_fill_gradient(low = "white", high = "#43a2ca") + 
-  # add count in each cell
-  geom_text(aes(label = n)) + 
-  # remove the color legend
-  guides(color = "none")
-
-
-```
-
-
-```{r randomForest_OA}
-# calculate overall accuracy for training set predictions 
-OA_randomForest_train <- sum(rf_train_results$obs == rf_train_results$pred) / nrow(rf_train_results)
-print(paste("Overall Accuracy of training set SPECIES predictions:", round(OA_randomForest_train, 4)))
-
-# calculate overall accuracy for validation set predictions 
-OA_randomForest_valid <- sum(rf_valid_results$obs == rf_valid_results$pred) / nrow(rf_valid_results)
-print(paste("Overall Accuracy of validation set SPECIES predictions:", round(OA_randomForest_valid, 4)))
-```
 
 
 
