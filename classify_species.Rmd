@@ -287,9 +287,11 @@ rf_train_results %>%
   labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True species for Training Set") + 
   scale_fill_gradient(low = "white", high = "#43a2ca") + 
   # add count in each cell
-  geom_text(aes(label = n)) + 
+  geom_text(aes(label = n, alpha = n > 0)) + 
   # remove the color legend
-  guides(color = "none")
+  #guides(color = "none")
+  # remove legend entirely
+  theme(legend.position = "none")
 ```
 
 Use the randomForest model to predict validation set species. Visualize classification results across species for the VALIDATION SET using ggplot: 
@@ -322,9 +324,9 @@ rf_valid_results %>%
   labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True SPECIES for Validation Set") + 
   scale_fill_gradient(low = "white", high = "#43a2ca") + 
   # add count in each cell
-  geom_text(aes(label = n)) + 
-  # remove the color legend
-  guides(color = "none")
+  geom_text(aes(label = n, alpha = n > 0)) + 
+  # remove legend entirely
+  theme(legend.position = "none")
 
 
 ```
@@ -562,9 +564,11 @@ rf_valid_results_genus %>%
   labs(x = "Truth", y = "Predicted", title = "RandomForest Classification Confusion Matrix: Predicted vs. True GENUS for Validation Set") + 
   scale_fill_gradient(low = "white", high = "#fc8d59") + 
   # add count in each cell
-  geom_text(aes(label = n)) + 
+  geom_text(aes(label = n, alpha = n > 0)) + 
   # remove the color legend
-  guides(color = "none")
+  #guides(color = "none")
+  # remove legend entirely
+  theme(legend.position = "none")
 ```
 
 
