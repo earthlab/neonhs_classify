@@ -1,0 +1,57 @@
+---
+title: "Create additional figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(readr)
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(USAboundaries)
+library(ggplot2)
+library(ggthemes)
+```
+
+## Study area
+
+```{r}
+# read spectral data 
+all_spectra <- readr::read_csv(here::here("data","cleaned_spectra.csv"))
+```
+
+```{r}
+# read NEON site and domain data
+# downloaded from: https://www.neonscience.org/data/about-data/spatial-data-maps
+neon_sites <- sf::st_read("data/shp/NEON_Field_Sites_v17.shp")
+neon_domains <- sf::st_read
+
+# get country data for the entire world 
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# get states data (admin level 1 in USA)
+states <- USAboundaries::us_states()
+```
+
+```{r, fig.width=5, fig.height=5}
+# create geospatial data - each plant that we extracted hyperspectral data
+spectra_locations <- all_spectra %>% 
+  select(latitude = adjDecimalLatitude, longitude = adjDecimalLongitude) 
+
+ggplot(data = states) +
+    geom_sf() +
+    geom_point(data = spectra_locations, aes(x = longitude, y = latitude), size = 1, 
+        shape = 20, fill = "black") +
+    coord_sf(xlim = c(min(spectra_locations$longitude) - 10, max(spectra_locations$longitude) + 10), 
+             ylim = c(min(spectra_locations$latitude) - 5, max(spectra_locations$latitude) + 10), 
+             expand = FALSE) + 
+  theme_minimal()
+
+#ggsave(filename = here::here("output", "study_area.png"))
+```
+
+
