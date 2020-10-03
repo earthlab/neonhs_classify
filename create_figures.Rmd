@@ -15,6 +15,7 @@ library(rnaturalearthdata)
 library(USAboundaries)
 library(ggplot2)
 library(ggthemes)
+library(spData)
 ```
 
 ## Study area
@@ -38,20 +39,159 @@ states <- USAboundaries::us_states()
 ```
 
 ```{r, fig.width=5, fig.height=5}
-# create geospatial data - each plant that we extracted hyperspectral data
+# get lat lon coordinates for each sampled plant location
 spectra_locations <- all_spectra %>% 
   select(latitude = adjDecimalLatitude, longitude = adjDecimalLongitude) 
+
+# convert the CRS for mapping 
+states_abe <- st_transform(x = states, crs = )
 
 ggplot(data = states) +
     geom_sf() +
     geom_point(data = spectra_locations, aes(x = longitude, y = latitude), size = 1, 
-        shape = 20, fill = "black") +
+        shape = 20, fill = "black") 
+
++
     coord_sf(xlim = c(min(spectra_locations$longitude) - 10, max(spectra_locations$longitude) + 10), 
              ylim = c(min(spectra_locations$latitude) - 5, max(spectra_locations$latitude) + 10), 
              expand = FALSE) + 
   theme_minimal()
 
-#ggsave(filename = here::here("output", "study_area.png"))
+ggsave(filename = here::here("output", "study_area.png"))
 ```
 
+
+```{r}
+data("us_states", package = "spData")
+# transform coordinate reference system to 2163, US National Atlas Equal Area Projection
+us_states_2163 = st_transform(spData::us_states, crs = 2163)
+alaska_2163 = st_transform(spData::alaska, crs = 2163)
+
+# alaska to inset 
+alaska_grob <- ggplotGrob(
+      ggplot(data = alaska_2163, fill = "white"))
+
+
+# 1 US states 
+ggplot(data = us_states_2163) + 
+  geom_sf(fill = "white")
+```
+
+```{r}
+# 2. Alaska
+ggplot() + 
+  geom_sf(data = alaska_2163, fill = "white")
+```
+
+```{r}
+# 3. Alaska inset
+main_map <- ggplot() + 
+  geom_sf(data = us_states_2163, fill = "white")
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill = "white") + 
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal()
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.5,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 200000)/2.5)
+```
+
+```{r}
+# 4 
+main_map <- ggplot() + 
+  geom_sf(data = us_states_2163, fill = "white") + 
+  # increase the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000))
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill = "white") + 
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal()
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.5,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 200000)/2.5) 
+
+```
+
+```{r}
+#5
+main_map <- ggplot() + 
+  geom_sf(data = us_states_2163, fill = "white") + 
+  # increase the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000))
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill = "white") + 
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal()
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.5,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 200000)/2.5) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()
+```
+```{r}
+main_map <- ggplot() + 
+  geom_sf(data = us_states_2163, fill = "white") + 
+  # increase the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000)) + 
+  # add NEON domains 
+  
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill = "white") + 
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal()
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.5,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 200000)/2.5) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()
+```
 
