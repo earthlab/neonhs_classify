@@ -315,19 +315,22 @@ main_map +
   theme_bw()  + 
   theme(legend.position = "none")
 ```
-Filter domains to include only the ones where we have data for this study 
+Filter domains to include only the ones where we have data for this study.
+st_intersection takes too long using all points... somehow get a shorter list of which domains have data? 
 ```{r}
 # transform CRS of spectra locations
 spectra_points <- st_as_sf(x = spectra_locations, 
                            coords = c("longitude", "latitude"), 
                            crs = 2163)
+neon_domains_aee <- st_transform(x = neon_domains, crs =2163)
 
 # filter NEON Domains based on where we have veg samples 
-neon_domains_subset <- st_intersection(x = st_transform(x = neon_domains,
-                                                        crs =2163),
+neon_domains_subset <- st_intersection(x = neon_domains_aee,
                                        y = spectra_points)
+```
 
 
+```{r}
 main_map <- ggplot() + 
   # US states, transform to ALbers equal area, set aesthetics
   geom_sf(data = us_states_2163, fill="grey", color="gray60", alpha=0.3) + 
