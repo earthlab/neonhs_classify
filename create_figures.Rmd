@@ -25,9 +25,9 @@ library(tidyr)
 # read spectral data 
 all_spectra <- readr::read_csv(here::here("data","cleaned_spectra.csv"))
 
-# add a new column with domain name code 
+# add a new column with site code 
 all_spectra <- all_spectra %>% 
-  tidyr::separate(col = namedLocation, into = "domainCode", sep = "_", extra = "drop")
+  tidyr::separate(col = namedLocation, into = "siteCode", sep = "_", remove = FALSE, extra = "drop")
 ```
 
 ```{r}
