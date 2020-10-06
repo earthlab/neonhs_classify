@@ -16,6 +16,7 @@ library(USAboundaries)
 library(ggplot2)
 library(ggthemes)
 library(spData)
+library(tidyr)
 ```
 
 ## Study area
@@ -23,6 +24,10 @@ library(spData)
 ```{r}
 # read spectral data 
 all_spectra <- readr::read_csv(here::here("data","cleaned_spectra.csv"))
+
+# add a new column with domain name code 
+all_spectra <- all_spectra %>% 
+  tidyr::separate(col = namedLocation, into = "domainCode", sep = "_", extra = "drop")
 ```
 
 ```{r}
@@ -316,17 +321,39 @@ main_map +
   theme(legend.position = "none")
 ```
 Filter domains to include only the ones where we have data for this study.
-st_intersection takes too long using all points... somehow get a shorter list of which domains have data? 
+
 ```{r}
-# transform CRS of spectra locations
-spectra_points <- st_as_sf(x = spectra_locations, 
+# filter duplicate spectra locations 
+spectra_locations_distinct <- spectra_locations %>% 
+  dplyr::distinct()
+
+# convert spectra locations to SF object with the same CRS as the neon domains 
+spectra_points <- st_as_sf(x = spectra_locations_distinct, 
                            coords = c("longitude", "latitude"), 
-                           crs = 2163)
+                           crs = 4326)
+
+
+
+
+# filter NEON Domains based on where we have veg samples 
+domains_filtered <- neon_domains %>%
+  mutate( id = row_number() ) %>% 
+  #filter out domains that do not have any intersections with the points
+  filter( id %in% unlist( st_intersects(x = neon_domains, y = spectra_points) ) ) 
+
+mapview(domains_filtered, zcol = "DomainName") + mapview(spectra_points)
+
+
 neon_domains_aee <- st_transform(x = neon_domains, crs =2163)
 
 # filter NEON Domains based on where we have veg samples 
-neon_domains_subset <- st_intersection(x = neon_domains_aee,
-                                       y = spectra_points)
+neon_domains_aee %>%
+  mutate( id = row_number() ) %>% 
+  #filter out domains that do not have any intersections with the points
+  filter( id %in% unlist( st_intersection(x = neon_domains_aee, y = spectra_points) ) ) %>%
+  #plot
+  mapview::mapview()   
+
 ```
 
 
