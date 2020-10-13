@@ -897,6 +897,10 @@ main_map +
 # Domain 10 is Central Plains and there do not appear to be any sites there
 # with vegetation data for our study...... 
 unique(all_spectra %>% filter(siteCode == "RMNP") %>% select(domainNumber))
+
+# to do? 
+# remove D10 since there are no points located within it? 
+# change the size of each point to show how many spectra per site???? 
 ```
 
 Manually remove the D10 Central Plains domain since there is no point visibly in there?
