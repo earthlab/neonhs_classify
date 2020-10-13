@@ -56,6 +56,7 @@ spectra_locations <- all_spectra %>%
 
 # convert the CRS for mapping 
 states_abe <- st_transform(x = states, crs = 2163)
+world_abe <- st_transform(x = world, crs = 2163)
 
 ggplot(data = states) +
     geom_sf() +
@@ -75,6 +76,7 @@ data("us_states", package = "spData")
 # transform coordinate reference system to 2163, US National Atlas Equal Area Projection
 us_states_2163 = st_transform(spData::us_states, crs = 2163)
 alaska_2163 = st_transform(spData::alaska, crs = 2163)
+world_2163 = st_transform(spData::world, crs = 2163)
 
 # alaska to inset 
 alaska_grob <- ggplotGrob(
@@ -741,6 +743,13 @@ main_map +
 # Domain 10 is Central Plains and there do not appear to be any sites there
 # with vegetation data for our study...... 
 unique(all_spectra %>% filter(siteCode == "RMNP") %>% select(domainNumber))
+
+# to do? 
+# add world boundaries for context 
+  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
+# ad north arror and scale bar 
+    
+    
 ```
 
 Manually remove the D10 Central Plains domain since there is no point visibly in there?
