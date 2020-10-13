@@ -19,6 +19,7 @@ library(spData)
 library(tidyr)
 library(mapview)
 library(RColorBrewer)
+library(ggspatial)
 ```
 
 ## Study area
@@ -734,6 +735,157 @@ main_map +
   # titles and labels
   labs(fill = "NEON Domain")
 ```
+Add continental boundaries for context? Fix background for Alaska inset
+
+```{r}
+# Filter NEON sites based on which ones we have data at, and plot those as points 
+neon_sites_filtered <- neon_sites %>% 
+  dplyr::filter(siteID %in% unique(all_spectra$siteCode))
+
+neon_sites_filtered <- st_transform(neon_sites_filtered, crs = 2163)
+
+# NEON domain color palette
+colourCount = length(unique(domains_filtered$DomainID))
+getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+colors_domains <- data.frame(names = sort(unique(domains_filtered$DomainName)),
+                        values = getPalette(colourCount))
+
+main_map <- ggplot() + 
+  # US states, transform to ALbers equal area, set aesthetics
+  geom_sf(data = us_states_2163, fill="grey", color="gray70", alpha=0.3) + 
+  # continent boundaries for context 
+  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
+   # add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # add NEON sites as points 
+  geom_sf(data = neon_sites_filtered) + 
+  # set the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000))  + 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # get rid of legend
+  theme(legend.position = "none") 
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  # add Alaska boundaries
+  geom_sf(data = spData::alaska, fill="grey", color="gray70", alpha=0.3) + 
+  # continent boundaries for context 
+  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
+  # Add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # add NEON sites as points 
+  geom_sf(data = neon_sites_filtered) + 
+  # set extents to zoom in just on Alaska
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_clean() +
+  # get rid of legend for now
+  theme(legend.position = "none") + 
+  # fill for neon domains in the legend 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # add a border around the alaska inset 
+  theme(panel.border = element_rect(colour = "black", fill = NA))
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2770000,
+                    xmax = -2700000 + (1600000 - (-2400000))/2.4,
+                    ymin = -2500000,
+                    ymax = -2450000 + (2500000 - 20000)/2.4) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()  + 
+  # apply color scale for domains across the contiguous US and Alaska
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # titles and labels
+  labs(fill = "NEON Domain")
+```
+Add a north arrow and fix the inset size
+
+```{r}
+# Filter NEON sites based on which ones we have data at, and plot those as points 
+neon_sites_filtered <- neon_sites %>% 
+  dplyr::filter(siteID %in% unique(all_spectra$siteCode))
+
+neon_sites_filtered <- st_transform(neon_sites_filtered, crs = 2163)
+
+# NEON domain color palette
+colourCount = length(unique(domains_filtered$DomainID))
+getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+colors_domains <- data.frame(names = sort(unique(domains_filtered$DomainName)),
+                        values = getPalette(colourCount))
+
+main_map <- ggplot() + 
+  # US states, transform to ALbers equal area, set aesthetics
+  geom_sf(data = us_states_2163, fill="grey", color="gray70", alpha=0.3) + 
+  # continent boundaries for context 
+  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
+   # add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # add NEON sites as points 
+  geom_sf(data = neon_sites_filtered) + 
+  # set the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000))  + 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # get rid of legend
+  theme(legend.position = "none") 
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  # add Alaska boundaries
+  geom_sf(data = spData::alaska, fill="grey", color="gray70", alpha=0.3) + 
+  # continent boundaries for context 
+  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
+  # Add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # add NEON sites as points 
+  geom_sf(data = neon_sites_filtered) + 
+  # set extents to zoom in just on Alaska
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_clean() +
+  # get rid of legend for now
+  theme(legend.position = "none") + 
+  # fill for neon domains in the legend 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # add a border around the alaska inset 
+  theme(panel.border = element_rect(colour = "black", fill = NA))
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2700000 + (1600000 - (-2400000))/2.5,
+                    ymin = -2470000,
+                    ymax = -2450000 + (2500000 - 20000)/2.5) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()  + 
+  # apply color scale for domains across the contiguous US and Alaska
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # titles and labels
+  labs(fill = "NEON Domain") + 
+  # add scale bar
+  annotation_scale(location = "br", width_hint = 0.5, style = "ticks") +
+  # add north arrow
+  annotation_north_arrow(location = "tl", which_north = "true", 
+                         pad_x = unit(0.15, "in"), pad_y = unit(0.25, "in"),
+                         style = north_arrow_fancy_orienteering) 
+```
+
 
 ```{r}
 # weird thing
@@ -747,7 +899,7 @@ unique(all_spectra %>% filter(siteCode == "RMNP") %>% select(domainNumber))
 # to do? 
 # add world boundaries for context 
   geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
-# ad north arror and scale bar 
+# ad north arrorw and scale bar 
     
     
 ```
