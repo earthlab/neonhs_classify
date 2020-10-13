@@ -53,7 +53,7 @@ states <- USAboundaries::us_states()
 ```{r, fig.width=5, fig.height=5}
 # get lat lon coordinates for each sampled plant location
 spectra_locations <- all_spectra %>% 
-  select(latitude = adjDecimalLatitude, longitude = adjDecimalLongitude, domainNumber) 
+  select(latitude = adjDecimalLatitude, longitude = adjDecimalLongitude, domainNumber, siteCode) 
 
 # convert the CRS for mapping 
 states_abe <- st_transform(x = states, crs = 2163)
@@ -818,9 +818,11 @@ neon_sites_filtered <- st_transform(neon_sites_filtered, crs = 2163)
 
 # NEON domain color palette
 colourCount = length(unique(domains_filtered$DomainID))
-getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+#getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+getPalette = viridis(colourCount) # use the viridis palette 
 colors_domains <- data.frame(names = sort(unique(domains_filtered$DomainName)),
-                        values = getPalette(colourCount))
+                        #values = getPalette(colourCount)) #colorRampPalette
+                        values = getPalette) # viridis
 
 main_map <- ggplot() + 
   # US states, transform to ALbers equal area, set aesthetics
@@ -895,13 +897,6 @@ main_map +
 # Domain 10 is Central Plains and there do not appear to be any sites there
 # with vegetation data for our study...... 
 unique(all_spectra %>% filter(siteCode == "RMNP") %>% select(domainNumber))
-
-# to do? 
-# add world boundaries for context 
-  geom_sf(data = world_2163, fill="grey", color="gray70", alpha=0.3) + 
-# ad north arrorw and scale bar 
-    
-    
 ```
 
 Manually remove the D10 Central Plains domain since there is no point visibly in there?
