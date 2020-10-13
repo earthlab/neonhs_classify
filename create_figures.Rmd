@@ -18,6 +18,7 @@ library(ggthemes)
 library(spData)
 library(tidyr)
 library(mapview)
+library(RColorBrewer)
 ```
 
 ## Study area
@@ -352,7 +353,6 @@ neon_domains_aee <- st_transform(x = domains_filtered, crs =2163)
 ```
 
 
-
 ```{r}
 main_map <- ggplot() + 
   # US states, transform to ALbers equal area, set aesthetics
@@ -395,4 +395,146 @@ main_map +
   theme_bw()  + 
   theme(legend.position = "none")
 ```
+Add a legend for the NEON domains 
+```{r}
+main_map <- ggplot() + 
+  # US states, transform to ALbers equal area, set aesthetics
+  geom_sf(data = us_states_2163, fill="grey", color="gray70", alpha=0.3) + 
+   # add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # get rid of legend
+  theme(legend.position = "none") + 
+  # set the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000)) 
 
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill="grey", color="gray70", alpha=0.3) + 
+  # Add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # set extents to zoom in just on Alaska
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal() +
+  # get rid of legend for now
+  theme(legend.position = "none") 
+
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.2,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 20000)/2.2) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()  #+ 
+  #theme(legend.position = "none")
+```
+Set color palette
+
+```{r}
+main_map <- ggplot() + 
+  # US states, transform to ALbers equal area, set aesthetics
+  geom_sf(data = us_states_2163, fill="grey", color="gray70", alpha=0.3) + 
+   # add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # get rid of legend
+  theme(legend.position = "none") + 
+  # set the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000)) 
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill="grey", color="gray70", alpha=0.3) + 
+  # Add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # set extents to zoom in just on Alaska
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal() +
+  # get rid of legend for now
+  theme(legend.position = "none") 
+
+colourCount = length(unique(domains_filtered$DomainID))
+getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.2,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 20000)/2.2) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()  + 
+  scale_fill_manual(values = getPalette(colourCount))
+```
+Figure out how to color the Alaska domains too. Colorblind safe if possible. Properly name legend. 
+
+```{r}
+
+colourCount = length(unique(domains_filtered$DomainID))
+getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+colors_domains <- data.frame(names = sort(unique(domains_filtered$DomainName)),
+                        values = getPalette(colourCount))
+
+main_map <- ggplot() + 
+  # US states, transform to ALbers equal area, set aesthetics
+  geom_sf(data = us_states_2163, fill="grey", color="gray70", alpha=0.3) + 
+   # add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # set the map extent to make room for the inset 
+  coord_sf(crs = st_crs(2163), 
+           xlim = c(-2500000, 2500000), 
+           ylim = c(-2300000, 
+         730000))  + 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # get rid of legend
+  theme(legend.position = "none")
+
+# transform projection to Alaska Albers projection (CRS 3467)
+alaska_inset <- ggplot() + 
+  geom_sf(data = spData::alaska, fill="grey", color="gray70", alpha=0.3) + 
+  # Add NEON domains 
+  geom_sf(data = domains_filtered, aes(fill = factor(DomainName)), 
+          alpha = 0.7, color = "gray40") + 
+  # set extents to zoom in just on Alaska
+  coord_sf(crs = st_crs(3467), 
+           xlim = c(-2400000, 1600000), 
+           ylim = c(200000, 2500000), 
+           expand = FALSE, datum = NA) + 
+  theme_minimal() +
+  # get rid of legend for now
+  theme(legend.position = "none") + 
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values)
+
+# combine main map with alaska as an inset
+main_map +
+  annotation_custom(grob = ggplotGrob(alaska_inset),
+                    xmin = -2750000,
+                    xmax = -2750000 + (1600000 - (-2400000))/2.2,
+                    ymin = -2450000,
+                    ymax = -2450000 + (2500000 - 20000)/2.2) + 
+  # set theme to make background white, subtle grid lines, outline map
+  theme_bw()  + 
+  # apply color scale for domains across the contiguous US and Alaska
+  scale_fill_manual(breaks = colors_domains$names, values = colors_domains$values) + 
+  # titles and labels
+  labs(fill = "NEON Domains")
+```
