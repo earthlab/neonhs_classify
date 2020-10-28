@@ -23,7 +23,7 @@ library(rnaturalearthdata)
 
 ## Study area
 
-```{r}
+```{r prepare_data}
 # read NEON domain polygons
 neon_domains <- sf::st_read("data/shp/NEON_Domains.shp", quiet = TRUE)
 
@@ -45,9 +45,7 @@ domains_containing_spectra <- neon_domains %>%
 domains_filtered_2163 <- sf::st_transform(x = domains_containing_spectra, crs = 2163)
 domains_all_2163 <- sf::st_transform(x = neon_domains, crs = 2163)
 spectra_2163 <- sf::st_transform(x = spectra_locations, crs = 2163)
-```
 
-```{r}
 # load and transform additional geospatial data for mapping 
 data("us_states", package = "spData")
 us_states_2163 <- st_transform(spData::us_states, crs = 2163)
@@ -59,8 +57,9 @@ colourCount = length(unique(domains_filtered_2163$DomainID))
 getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
 colors_domains <- data.frame(names = sort(unique(domains_filtered_2163$DomainName)),
                         values = getPalette(colourCount)) #colorRampPalette
+```
 
-
+```{r make_map, fig.height=4, fig.width=6}
 # make the map 
 ggplot() + 
   # US States
@@ -98,7 +97,7 @@ ggsave(filename = here::here("output", "study_area.pdf"),
        width = 12, height = 8)
 ```
 
-```{r}
+```{r make_map_with_alaska_inset, fig.height=4, fig.width=6}
 # make the map WITH ALASKA INSET
 main_map <- ggplot() + 
   # US States
