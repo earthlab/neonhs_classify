@@ -86,7 +86,7 @@ ggplot() +
            ylim = c(as.numeric(st_bbox(domains_filtered_2163)[2]),    # ymin
                     as.numeric(st_bbox(domains_filtered_2163)[4]))) + # ymax
   # add scale bar and north arrow 
-  annotation_scale(location = "bl", width_hint = 0.4, style = "ticks") +
+  annotation_scale(location = "bl", width_hint = 0.4, style = "bar") +
   # add north arrow
   annotation_north_arrow(location = "bl", which_north = "true", 
                          pad_x = unit(0.15, "in"), pad_y = unit(0.25, "in"),
@@ -160,10 +160,10 @@ main_map +
   # titles and labels
   labs(fill = "NEON Domain") + 
   # add scale bar
-  annotation_scale(location = "br", width_hint = 0.5, style = "ticks") +
+  annotation_scale(location = "br", width_hint = 0.5, style = "bar") +
   # add north arrow
   annotation_north_arrow(location = "tl", which_north = "true", 
-                         pad_x = unit(0.15, "in"), pad_y = unit(0.25, "in"),
+                         pad_x = unit(0.15, "in"), pad_y = unit(0.5, "in"),
                          style = north_arrow_fancy_orienteering) 
 
 # write plot to file 
