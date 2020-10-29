@@ -54,7 +54,8 @@ world_2163 <- ne_countries(scale = "medium", returnclass = "sf") %>% st_transfor
 
 # set color palette for NEON domains 
 colourCount = length(unique(domains_filtered_2163$DomainID))
-getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral"))
+#getPalette = colorRampPalette(brewer.pal(colourCount, "Spectral")) # Spectral
+getPalette = colorRampPalette(brewer.pal(colourCount, "Dark2")) # Dark2
 colors_domains <- data.frame(names = sort(unique(domains_filtered_2163$DomainName)),
                         values = getPalette(colourCount)) #colorRampPalette
 ```
