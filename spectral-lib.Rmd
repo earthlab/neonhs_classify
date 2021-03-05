@@ -1,0 +1,247 @@
+---
+title: "Extracting all spectra for NEON mapped stems"
+author: "Max Joseph"
+date: "2020-06-11"
+output: html_document
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-libraries, message=FALSE}
+library(tidyverse)
+library(neonUtilities)
+#install.packages('remotes')
+#remotes::install_github('NEONScience/NEON-geolocation/geoNEON', dependencies=TRUE)
+library(geoNEON)
+#install.packages('devtools')
+#devtools::install_github('earthlab/neonhs')
+library(neonhs)
+library(dplyr)
+library(here)
+library(sp)
+```
+
+Acquire vegetation data:
+
+```{r get-veg-data}
+# start timer 
+start_time <- Sys.time()
+
+out_dir <- here::here("analysis","data","raw_data","spectral-lib")
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Download NEON observational data, Woody plant vegetation structure
+neonUtilities::zipsByProduct(dpID = "DP1.10098.001",
+              savepath = out_dir,
+              check.size = FALSE)
+stackByTable(file.path(out_dir, "filesToStack10098"), folder = TRUE)
+```
+
+Read the mapping data and apparent individual data:
+
+```{r read-map}
+vegmap <- read_csv(file.path(out_dir, "filesToStack10098", "stackedFiles", 
+                            "vst_mappingandtagging.csv")) %>%
+  filter(!is.na(stemAzimuth), !is.na(pointID))
+vegind <- read_csv(file.path(out_dir, "filesToStack10098", "stackedFiles",
+                             "vst_apparentindividual.csv"))
+```
+
+Get precise locations for tagged plants and merge the mapping and individual data:
+
+```{r get-precise-locs, warning=FALSE}
+vegmap <- geoNEON::getLocTOS(vegmap, "vst_mappingandtagging")
+
+samples_to_keep <- vegind %>%
+  filter(plantStatus == "Live") %>%
+  mutate(year = lubridate::year(date)) %>%
+  group_by(individualID) %>%
+  summarize(year = list(seq(min(year), max(year), by = 1))) %>%
+  ungroup %>%
+  unnest(year)
+
+samples_to_keep %>%
+  count(individualID) %>%
+  arrange(-n)
+
+
+veg <- as_tibble(vegmap) %>%
+  group_by(individualID) %>%
+  # some records are revised at later dates with better coordinates
+  filter(!is.na(adjDecimalLatitude),
+         date == max(date)) %>%
+  ungroup %>%
+  select(-date) %>%
+  right_join(samples_to_keep) %>%
+  distinct(individualID, year, .keep_all = TRUE)
+
+veg %>%
+  count(individualID, year) %>%
+  arrange(-n)
+
+veg %>%
+  count(individualID) %>%
+  arrange(-n)
+
+nrow(vegmap)
+nrow(veg)
+```
+
+Save output file:
+
+```{r write-veg}
+write_csv(veg, file.path(out_dir, "neon-veg.csv"))
+```
+
+Visualize the imbalance of species identity:
+
+```{r make-veg-tibble}
+species_counts <- veg %>%
+  count(scientificName) %>%
+    separate(scientificName, into = c('genus', 'species'), sep = ' ',
+           extra = 'drop', remove = FALSE) %>%
+  mutate(name = paste(genus, species)) %>%
+  arrange(-n) %>%
+  mutate(scientific_name = fct_reorder(name, n),
+         order = 1:n()) %>%
+  dplyr::select(scientific_name, order, n)
+
+species_counts %>%
+  ggplot(aes(x = n, y = order)) +
+  scale_x_log10() +
+  geom_point(color = 'dodgerblue') +
+  xlab('Number of mapped stem locations') +
+  ylab('Order: commonest to rarest') +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+ggsave(file.path(out_dir, "veg-freq.png"), width = 4.5, height = 3)
+
+# number of mapped stems
+sum(species_counts$n)
+
+# number of singletons
+species_counts %>%
+  filter(n == 1)
+
+# number of species with fewer than 10 records
+species_counts %>%
+  filter(n < 10)
+
+# number of species with fewer than 100 records
+species_counts %>%
+  filter(n < 100)
+```
+
+Split the veg data into different datasets for sites and year:
+
+```{r split-veg}
+split_veg <- veg %>%
+  mutate(siteID_year = paste(siteID, year, sep = '_')) %>%
+  split(.$siteID_year)
+```
+
+For each site-year combination, extract hyperspectral data for all plants:
+
+```{r extract-data}
+spectra <- vector(mode = 'list', length = length(split_veg))
+dir.create(file.path(out_dir, "hs_data"), showWarnings = FALSE)
+csv_dir <- file.path(out_dir, "hs_data", "tabular")
+dir.create(csv_dir, recursive = TRUE, showWarnings = FALSE)
+
+try_extract <- function(path, pts) {
+  out <- tryCatch(hs_extract_pts(path, pts, bands = 1:426),
+                  error = function(e) NULL)
+  return(out)
+}
+
+for (i in seq_along(split_veg)) {
+  print(paste("processing year/site", i, "of", length(split_veg)))
+  subd <- split_veg[[i]]
+  identifier <- names(split_veg)[i]
+  outfile <- file.path(csv_dir, paste0(identifier, ".csv"))
+  if (!file.exists(outfile)) {
+    h5_dir <- file.path('hs_data', identifier)
+    dir.create(h5_dir, showWarnings = FALSE)
+    siteyear <- identifier %>% str_split('_') %>% unlist
+    site_code <- siteyear[1]
+    year <- siteyear[2]
+
+    # download data
+    try(neonUtilities::byTileAOP(dpID = "DP3.30006.001", site = site_code, year = year,
+            easting = subd$adjEasting, northing = subd$adjNorthing,
+            check.size = FALSE, savepath = h5_dir))
+    hs_paths <- list.files(path = h5_dir, pattern = 'reflectance.h5',
+                           recursive = TRUE, full.names = TRUE)
+    if (length(hs_paths) > 0) {
+      # extract spectra
+      spdf <- SpatialPointsDataFrame(subd[, c('adjEasting', 'adjNorthing')],
+                                 data = subd,
+                                 proj4string = CRS(hs_proj4string(hs_paths[1])))
+      out <- list()
+      for (j in seq_along(hs_paths)) {
+        res <- try_extract(hs_paths[j], spdf)
+        first_band <- grep('^band1', names(res), value = TRUE)[1]
+        if (!is.na(first_band)) {
+          na_vals <- is.na(res[[first_band]])
+          out[[i]] <- res[!na_vals, ]
+        }
+      }
+      hs_df <- lapply(out, as.data.frame) %>%
+        bind_rows %>%
+        as_tibble %>%
+        select(individualID, namedLocation,
+               year, uid, namedLocation,
+               adjEasting, adjNorthing,
+               taxonID, taxonRank, scientificName,
+               starts_with('band')) %>%
+        distinct
+      write_csv(hs_df, outfile)
+      unlink(h5_dir, recursive = TRUE, force = TRUE)
+    }
+  }
+}
+```
+
+Now, join all of the data together, and create one big data frame.
+
+```{r join-df}
+all_spectra <- list.files(csv_dir, full.names = TRUE) %>%
+  lapply(function(f) {
+    read_csv(f) %>%
+      pivot_longer(starts_with("band")) %>%
+      rename(reflectance = value) %>%
+      separate(name, into = c("band_idx", "wavelength_nm")) %>%
+      mutate(wavelength_nm = parse_number(wavelength_nm))
+  })
+
+
+nrows <- lapply(all_spectra, nrow) %>%
+  unlist
+
+all_spectra <- all_spectra[nrows > 0] %>%
+  bind_rows %>%
+  mutate(mask = case_when(
+  .$wavelength_nm > 1340 & .$wavelength_nm < 1445 ~ TRUE,
+  .$wavelength_nm > 1790 & .$wavelength_nm < 1955 ~ TRUE,
+  .$wavelength_nm > 2400 ~ TRUE,
+  TRUE ~ FALSE),
+  spectraID = paste(individualID, year, sep = "_")) %>%
+  select(spectraID, everything())
+
+write_csv(all_spectra, file.path(out_dir, "all_spectra.csv"))
+```
+
+```{r how_long_did_this_take}
+# stop timer
+end_time <- Sys.time()
+
+elapsed_time <- end_time - start_time
+
+print(difftime(end_time, start_time, 
+         units = c("auto", "secs", "mins", "hours",
+                   "days", "weeks")))
+```
