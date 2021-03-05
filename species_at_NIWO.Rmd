@@ -1,0 +1,117 @@
+---
+title: "Species at NEON NIWO"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(neonUtilities)
+library(dplyr)
+library(tidyverse)
+```
+
+## Download NEON data
+
+```{r}
+# Create output directory to store data
+out_dir <- here::here("analysis","data","raw_data","NIWO")
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Download the NEON Woody plant vegetation structure data for the NIWO site
+neonUtilities::zipsByProduct(dpID = "DP1.10098.001",
+                             site="NIWO",
+                             savepath = out_dir,
+                             check.size = FALSE)
+neonUtilities::stackByTable(file.path(out_dir, "filesToStack10098"), folder = TRUE)
+```
+
+Read the mapping data and apparent individual data:
+
+```{r read-map}
+vegmap <- read_csv(file.path(out_dir, "filesToStack10098", "stackedFiles", 
+                            "vst_mappingandtagging.csv")) %>%
+  filter(!is.na(stemAzimuth), !is.na(pointID))
+vegind <- read_csv(file.path(out_dir, "filesToStack10098", "stackedFiles",
+                             "vst_apparentindividual.csv"))
+```
+
+Get precise locations for tagged plants and merge the mapping and individual data:
+
+```{r get-precise-locs, warning=FALSE}
+vegmap <- geoNEON::getLocTOS(vegmap, "vst_mappingandtagging")
+
+samples_to_keep <- vegind %>%
+  filter(plantStatus == "Live") %>%
+  mutate(year = lubridate::year(date)) %>%
+  group_by(individualID) %>%
+  summarize(year = list(seq(min(year), max(year), by = 1))) %>%
+  ungroup %>%
+  unnest(year)
+
+samples_to_keep %>%
+  count(individualID) %>%
+  arrange(-n)
+
+
+veg <- as_tibble(vegmap) %>%
+  group_by(individualID) %>%
+  # some records are revised at later dates with better coordinates
+  filter(!is.na(adjDecimalLatitude),
+         date == max(date)) %>%
+  ungroup %>%
+  select(-date) %>%
+  right_join(samples_to_keep) %>%
+  distinct(individualID, year, .keep_all = TRUE)
+
+veg %>%
+  count(individualID, year) %>%
+  arrange(-n)
+
+veg %>%
+  count(individualID) %>%
+  arrange(-n)
+
+nrow(vegmap)
+nrow(veg)
+```
+```{r write-veg}
+write_csv(veg, file.path(out_dir, "neon-veg_NIWO.csv"))
+```
+
+
+```{r make-veg-tibble}
+species_counts <- veg %>%
+  count(scientificName) %>%
+    separate(scientificName, into = c('genus', 'species'), sep = ' ',
+           extra = 'drop', remove = FALSE) %>%
+  mutate(name = paste(genus, species)) %>%
+  arrange(-n) %>%
+  mutate(scientific_name = fct_reorder(name, n),
+         order = 1:n()) %>%
+  dplyr::select(scientific_name, order, n)
+
+species_counts %>%
+  ggplot(aes(x = n, y = order)) +
+  scale_x_log10() +
+  geom_point(color = 'dodgerblue') +
+  xlab('Number of mapped stem locations') +
+  ylab('Order: commonest to rarest') +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+ggsave(file.path(out_dir, "veg-freq.png"), width = 4.5, height = 3)
+
+# number of mapped stems
+sum(species_counts$n)
+
+# number of singletons
+species_counts %>%
+  filter(n == 1)
+
+# number of species with fewer than 10 records
+species_counts %>%
+  filter(n < 10)
+
+# number of species with fewer than 100 records
+species_counts %>%
+  filter(n < 100)
+```
