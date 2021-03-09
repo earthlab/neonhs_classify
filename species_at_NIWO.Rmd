@@ -8,6 +8,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(neonUtilities)
 library(dplyr)
 library(tidyverse)
+library(kableExtra)
+library(taxize) # scientific name to common name
 ```
 
 ## Download NEON data
@@ -84,34 +86,54 @@ species_counts <- veg %>%
   count(scientificName) %>%
     separate(scientificName, into = c('genus', 'species'), sep = ' ',
            extra = 'drop', remove = FALSE) %>%
-  mutate(name = paste(genus, species)) %>%
+  mutate(genusSpecies = paste(genus, species)) %>%
   arrange(-n) %>%
-  mutate(scientific_name = fct_reorder(name, n),
-         order = 1:n()) %>%
-  dplyr::select(scientific_name, order, n)
-
-species_counts %>%
-  ggplot(aes(x = n, y = order)) +
-  scale_x_log10() +
-  geom_point(color = 'dodgerblue') +
-  xlab('Number of mapped stem locations') +
-  ylab('Order: commonest to rarest') +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
-ggsave(file.path(out_dir, "veg-freq.png"), width = 4.5, height = 3)
+  na.omit() # remove rows with NA values
 
 # number of mapped stems
+message("total number of mapped stems")
 sum(species_counts$n)
 
-# number of singletons
-species_counts %>%
-  filter(n == 1)
 
-# number of species with fewer than 10 records
-species_counts %>%
-  filter(n < 10)
-
-# number of species with fewer than 100 records
-species_counts %>%
-  filter(n < 100)
+# histogram of taxons, Genus species
+ggplot(species_counts, aes(y = reorder(genusSpecies, n), x = n)) + 
+  geom_bar(stat = "identity") + 
+  labs(title = "Histogram of species counts at NEON NIWO",
+       y = "Genus species") + 
+  theme_bw() 
 ```
+
+```{r table_species_counts}
+species_counts %>% 
+  select(n, genusSpecies, genus, species, everything()) %>% 
+  kableExtra::kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+Get common name from scientific name (this only works for some scientific names using taxize::sci2comm) so I'll add this column manually for now.
+
+```{r}
+# create empty column for common name data
+species_counts$commonName <- NA
+
+# automatically convert scientific name to common name?
+for(i in 1:nrow(species_counts)){
+  species_counts$commonName[i] <- taxize::sci2comm(species_counts$genusSpecies[i])
+}
+
+# add common names automatically since they don't all populate
+species_counts$commonName <- c("Engelmann spruce", 
+                               "subalpine fir", 
+                               "lodgepole pine",
+                               "limber pine",
+                               "willows",
+                               "shrubby cinquefoil",
+                               "common juniper")
+
+# table 
+species_counts %>% 
+  select(n, genusSpecies, genus, species, everything()) %>% 
+  kableExtra::kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
